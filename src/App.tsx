@@ -2,7 +2,8 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+// Remplacement de BrowserRouter par HashRouter
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Membership from './pages/Membership';
@@ -12,7 +13,7 @@ import Store from './pages/Store';
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div className="bg-black min-h-screen text-white font-sans selection:bg-fuchsia-900 selection:text-white">
         <Navbar />
         <main className="pt-20">
@@ -26,6 +27,6 @@ export default function App() {
           </Routes>
         </main>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
