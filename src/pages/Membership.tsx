@@ -48,7 +48,7 @@ export default function Membership() {
           label="L'ÉLITE DE LOS SANTOS"
           title="ADHÉSION AU COMPLEXE"
           description={<p className="text-left">Le Diamond n'est pas seulement un lieu, c'est un testament à l'accomplissement personnel. Notre programme d'adhésion est conçu pour ceux qui exigent le meilleur, sans compromis. Que vous fassiez vos premiers pas avec l'adhésion Silver ou que vous atteigniez les sommets du statut Diamond, vous entrez dans un monde où chaque détail est orchestré pour votre plaisir souverain.</p>}
-          bgUrl="/GTA-Online-Casino-Update.jpg"
+          bgUrl="./GTA-Online-Casino-Update.jpg"
           textAlign="left"
         />
       </div>
@@ -121,7 +121,7 @@ export default function Membership() {
           viewport={{ once: true }}
           transition={{ duration: 1.5 }}
           className="h-[50vh] w-full bg-cover bg-center bg-no-repeat relative grayscale hover:grayscale-0 transition-all duration-1000" 
-          style={{ backgroundImage: 'url(/16926f56733decd4dfaac886b456e5739c78ef40.jpg)' }}
+          style={{ backgroundImage: 'url(./16926f56733decd4dfaac886b456e5739c78ef40.jpg)' }}
         >
            <div className="absolute inset-0 bg-black/40" />
            <div className="absolute inset-0 flex items-center justify-center border-y border-white/5">
