@@ -36,7 +36,7 @@ export default function Store() {
           label="L'EXPÉRIENCE DE L'EXCLUSIVITÉ"
           title="LA BOUTIQUE"
           description={<p>Mode exclusive. Œuvres d'art uniques. Il y a certaines choses dans la vie que l'argent ne peut acheter. Mais rassurez-vous. Notre boutique propose une sélection tournante d'articles choisis avec goût, que vous pouvez acquérir avec vos Jetons.</p>}
-          bgUrl="/783829344e15bcc769c2117f32ab4e468e0070a5.jpg"
+          bgUrl="./783829344e15bcc769c2117f32ab4e468e0070a5.jpg"
           textAlign="left"
         />
       </div>
