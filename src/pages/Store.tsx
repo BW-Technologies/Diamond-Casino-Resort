@@ -6,19 +6,19 @@ export default function Store() {
     {
       id: 1,
       name: "Œuvre d'art - Pro",
-      imageUrl: "/29d83070910e800e6cc0fe7b787ae5f739674b95.jpg",
+      imageUrl: "./29d83070910e800e6cc0fe7b787ae5f739674b95.jpg",
       price: "12,500 Jetons"
     },
     {
       id: 2,
       name: "Affiche Vintage",
-      imageUrl: "/16926f56733decd4dfaac886b456e5739c787ae5f739674b95.jpg", // Using a real one if I can, but let's stick to user logic
+      imageUrl: "./16926f56733decd4dfaac886b456e5739c787ae5f739674b95.jpg", // Using a real one if I can, but let's stick to user logic
       price: "8,000 Jetons"
     },
     {
       id: 3,
       name: "Gilet et Cravate de croupier",
-      imageUrl: "https://images.unsplash.com/photo-1594938298596-eb5fd3f2b1d6?auto=format&fit=crop&q=80",
+      imageUrl: "https://images.unsplash.com/photo-1526632503813-6f479409d7bf?q=80&w=992&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       price: "15,000 Jetons"
     },
     {
