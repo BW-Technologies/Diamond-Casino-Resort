@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { getAssetUrl } from '../lib/utils';
 
 interface HeroSectionProps {
   label: string;
@@ -52,7 +53,7 @@ export default function HeroSection({
           animate={{ scale: 1 }}
           transition={{ duration: 4, ease: 'easeOut' }}
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url('${bgUrl}')` }}
+          style={{ backgroundImage: `url('${getAssetUrl(bgUrl)}')` }}
         />
       )}
       

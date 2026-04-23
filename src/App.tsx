@@ -10,6 +10,7 @@ import Membership from './pages/Membership';
 import Penthouses from './pages/Penthouses';
 import Casino from './pages/Casino';
 import Store from './pages/Store';
+import History from './pages/History';
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/penthouses" element={<Penthouses />} />
             <Route path="/casino" element={<Casino />} />
             <Route path="/store" element={<Store />} />
+            <Route path="/heritage" element={<History />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

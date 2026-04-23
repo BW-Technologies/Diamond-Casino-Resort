@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { getAssetUrl } from '../lib/utils';
 
 interface SplitSectionProps {
   label: string;
@@ -33,7 +34,7 @@ export default function SplitSection({
         viewport={{ once: true }}
         transition={{ duration: 1.5, ease: 'easeOut' }}
         className={`absolute inset-0 bg-cover bg-center`}
-        style={{ backgroundImage: `url('${bgUrl}')` }}
+        style={{ backgroundImage: `url('${getAssetUrl(bgUrl)}')` }}
       />
       
       {/* Gradient Overlay for Text Readability */}
