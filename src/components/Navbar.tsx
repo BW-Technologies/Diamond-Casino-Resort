@@ -21,7 +21,7 @@ export default function Navbar() {
     >
       <div className="flex items-center gap-12">
         <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
-          <img src="/Diamond Casino & Resort 1.png" alt="Diamond Casino Logo" className="h-24 w-auto drop-shadow-[0_0_20px_rgba(255,255,255,0.05)]" />
+          <img src="./Diamond Casino & Resort 1.png" alt="Diamond Casino Logo" className="h-24 w-auto drop-shadow-[0_0_20px_rgba(255,255,255,0.05)]" />
         </Link>
         <div className="flex items-center space-x-4 hidden md:flex">
           {navLinks.map((link) => {
