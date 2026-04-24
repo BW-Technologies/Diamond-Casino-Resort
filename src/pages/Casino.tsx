@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import HeroSection from '../components/HeroSection';
 import SplitSection from '../components/SplitSection';

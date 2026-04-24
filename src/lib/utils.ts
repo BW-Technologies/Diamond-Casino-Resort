@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 export function getAssetUrl(path: string) {
   if (!path) return path;
   if (path.startsWith('http')) return path;

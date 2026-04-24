@@ -25,17 +25,18 @@ export default function HeroSection({
 }: HeroSectionProps) {
 
   // Custom gradient based on text align to ensure readability without overpowering the image with purple
+  // Use a vertical gradient on mobile so the image is still visible
   const defaultOverlay = textAlign === 'left' 
-    ? 'bg-gradient-to-r from-[#0d001a]/95 via-[#2a0040]/60 to-transparent'
+    ? 'bg-gradient-to-t md:bg-gradient-to-r from-[#0d001a]/95 via-[#2a0040]/80 md:via-[#2a0040]/60 to-transparent'
     : textAlign === 'right'
-    ? 'bg-gradient-to-l from-[#0d001a]/95 via-[#2a0040]/60 to-transparent'
-    : 'bg-gradient-to-b from-[#0d001a]/40 via-[#0d001a]/80 to-[#0d001a]/95';
+    ? 'bg-gradient-to-t md:bg-gradient-to-l from-[#0d001a]/95 via-[#2a0040]/80 md:via-[#2a0040]/60 to-transparent'
+    : 'bg-gradient-to-t md:bg-gradient-to-b from-[#0d001a]/90 via-[#0d001a]/70 to-[#0d001a]/40 md:from-[#0d001a]/40 md:via-[#0d001a]/80 md:to-[#0d001a]/95';
 
   const fadeDirection = textAlign === 'left' ? -30 : textAlign === 'right' ? 30 : 0;
   const fadeUp = textAlign === 'center' ? 30 : 0;
 
   return (
-    <div className={`relative min-h-[85vh] w-full flex items-center bg-[#050505] overflow-hidden ${className}`}>
+    <div className={`relative min-h-[85vh] w-full flex items-center md:items-center justify-center md:justify-start bg-[#050505] overflow-hidden ${className}`}>
       {/* Background Asset */}
       {videoUrl ? (
         <video 
@@ -52,7 +53,7 @@ export default function HeroSection({
           initial={{ scale: 1.05 }}
           animate={{ scale: 1 }}
           transition={{ duration: 4, ease: 'easeOut' }}
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className="absolute inset-0 bg-cover bg-center md:bg-center bg-no-repeat"
           style={{ backgroundImage: `url('${getAssetUrl(bgUrl)}')` }}
         />
       )}
@@ -61,15 +62,15 @@ export default function HeroSection({
       <div className={`absolute inset-0 ${overlayClass || defaultOverlay}`} />
 
       {/* Content */}
-      <div className={`relative z-10 max-w-7xl mx-auto px-8 w-full ${textAlign === 'center' ? 'pt-20' : ''}`}>
+      <div className={`relative z-10 max-w-7xl mx-auto px-6 md:px-8 w-full ${textAlign === 'center' ? 'pt-20 md:pt-20' : 'pt-24 mt-32 md:mt-0'} flex`}>
         <motion.div 
           initial={{ opacity: 0, x: fadeDirection, y: fadeUp }}
           animate={{ opacity: 1, x: 0, y: 0 }}
           transition={{ duration: 1, delay: 0.2, ease: [0.25, 0.4, 0.2, 1] }}
-          className={`max-w-2xl ${textAlign === 'right' ? 'ml-auto' : textAlign === 'center' ? 'mx-auto text-center' : ''}`}
+          className={`max-w-2xl w-full ${textAlign === 'right' ? 'md:ml-auto' : textAlign === 'center' ? 'mx-auto text-center' : ''}`}
         >
           
-          <div className={`flex items-center mb-6 uppercase tracking-[0.2em] text-sm text-gray-300 font-bold ${textAlign === 'center' ? 'justify-center' : ''}`}>
+          <div className={`flex items-center mb-4 md:mb-6 uppercase tracking-[0.2em] text-xs md:text-sm text-gray-300 font-bold ${textAlign === 'center' ? 'justify-center' : ''}`}>
             {textAlign !== 'center' && (
               <motion.div 
                 initial={{ width: 0 }}
@@ -89,11 +90,11 @@ export default function HeroSection({
             )}
           </div>
           
-          <h1 className={`font-oswald text-6xl md:text-7xl lg:text-8xl font-bold uppercase leading-[0.95] mb-8 ${textAlign === 'center' ? '' : 'text-shadow-2xl shadow-black'}`}>
+          <h1 className={`font-oswald text-5xl md:text-7xl lg:text-8xl font-bold uppercase leading-[0.95] mb-6 md:mb-8 md:text-shadow-2xl md:shadow-black`}>
             {title}
           </h1>
           
-          <div className="font-sans text-lg text-gray-200 leading-relaxed font-light">
+          <div className="font-sans text-base md:text-lg text-gray-200 leading-relaxed font-light">
             {description}
           </div>
         </motion.div>
