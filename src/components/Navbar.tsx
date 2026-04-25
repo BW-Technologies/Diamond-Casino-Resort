@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X } from 'lucide-react';
 import { getAssetUrl } from '../lib/utils';
+import { auth } from '../lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 const navLinks = [
   { path: '/', label: 'ACCUEIL' },
@@ -17,6 +19,14 @@ const navLinks = [
 export default function Navbar() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -89,9 +99,9 @@ export default function Navbar() {
         transition={{ delay: 0.8, duration: 0.5 }}
         className="hidden lg:flex items-center gap-4 flex-shrink-0"
       >
-         <div className="px-6 py-2.5 border border-white/20 text-xs font-oswald tracking-widest hover:bg-white hover:text-black transition-all duration-500 cursor-pointer uppercase font-bold group shadow-[0_0_15px_rgba(255,255,255,0.05)] hover:shadow-[0_0_25px_rgba(255,255,255,0.8)] whitespace-nowrap">
-           SE CONNECTER
-         </div>
+         <Link to={user ? "/dashboard" : "/login"} className="px-6 py-2.5 border border-white/20 text-xs font-oswald tracking-widest hover:bg-white hover:text-black transition-all duration-500 cursor-pointer uppercase font-bold group shadow-[0_0_15px_rgba(255,255,255,0.05)] hover:shadow-[0_0_25px_rgba(255,255,255,0.8)] whitespace-nowrap block">
+           {user ? "MON PORTAIL" : "SE CONNECTER"}
+         </Link>
       </motion.div>
 
       {/* Mobile Menu Toggle */}
@@ -140,9 +150,9 @@ export default function Navbar() {
                 transition={{ delay: navLinks.length * 0.1 + 0.2 }}
                 className="mt-8"
               >
-                <div className="w-full text-center px-6 py-4 border border-white/20 text-sm font-oswald tracking-widest hover:bg-white hover:text-black transition-all cursor-pointer uppercase font-bold text-white">
-                  SE CONNECTER
-                </div>
+                <Link to={user ? "/dashboard" : "/login"} onClick={() => setIsMobileMenuOpen(false)} className="w-full block text-center px-6 py-4 border border-white/20 text-sm font-oswald tracking-widest hover:bg-white hover:text-black transition-all cursor-pointer uppercase font-bold text-white">
+                  {user ? "MON PORTAIL" : "SE CONNECTER"}
+                </Link>
               </motion.div>
             </div>
           </motion.div>

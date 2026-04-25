@@ -13,14 +13,16 @@ import Casino from './pages/Casino';
 import Store from './pages/Store';
 import History from './pages/History';
 import Events from './pages/Events';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 
 export default function App() {
   return (
     <HashRouter>
       <ScrollToTop />
-      <div className="bg-black min-h-screen text-white font-sans selection:bg-fuchsia-900 selection:text-white">
+      <div className="bg-black min-h-screen text-white font-sans selection:bg-fuchsia-900 selection:text-white flex flex-col">
         <Navbar />
-        <main className="pt-20">
+        <main className="pt-20 flex-1 flex flex-col">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/heritage" element={<History />} />
@@ -29,6 +31,8 @@ export default function App() {
             <Route path="/casino" element={<Casino />} />
             <Route path="/store" element={<Store />} />
             <Route path="/events" element={<Events />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

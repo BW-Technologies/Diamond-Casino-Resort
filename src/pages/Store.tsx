@@ -1,42 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import HeroSection from '../components/HeroSection';
 import Modal from '../components/ui/Modal';
 import { getAssetUrl } from '../lib/utils';
 
-export default function Store() {
-  const [activeItem, setActiveItem] = useState<{name: string, price: string, imageUrl: string, desc: string} | null>(null);
+interface StoreItem {
+  id: string;
+  name: string;
+  price: string;
+  imageUrl: string;
+  desc: string;
+}
 
-  const storeItems = [
-    {
-      id: 1,
-      name: "Œuvre d'art - Pro",
-      imageUrl: "/29d83070910e800e6cc0fe7b787ae5f739674b95.jpg",
-      price: "12,500 Jetons",
-      desc: "Une pièce maîtresse de la collection Vinewood Hills. Parfaite pour habiller le mur principal de votre Penthouse."
-    },
-    {
-      id: 2,
-      name: "Affiche Vintage",
-      imageUrl: "/16926f56733decd4dfaac886b456e5739c78ef40.jpg",
-      price: "8,000 Jetons",
-      desc: "Une affiche originale certifiée, représentant l'âge d'or des casinos. Un classique intemporel."
-    },
-    {
-      id: 3,
-      name: "Gilet et Cravate de croupier",
-      imageUrl: "https://images.unsplash.com/photo-1526632503813-6f479409d7bf?q=80&w=992&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      price: "15,000 Jetons",
-      desc: "Vêtements exclusifs de la ligne de prêt-à-porter du Diamond. Devenez le maître de la table, au moins en apparence."
-    },
-    {
-      id: 4,
-      name: "Montre de luxe Pegassi",
-      imageUrl: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&q=80",
-      price: "45,000 Jetons",
-      desc: "L'élégance à votre poignet. Un garde-temps sur mesure assemblé par les maîtres horlogers de Los Santos."
-    }
-  ];
+export default function Store() {
+  const [activeItem, setActiveItem] = useState<StoreItem | null>(null);
+  const [storeItems, setStoreItems] = useState<StoreItem[]>([]);
+
+  useEffect(() => {
+    const fetchStoreItems = async () => {
+      try {
+        const q = query(collection(db, 'storeItems'), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+        const allS: StoreItem[] = [];
+        snapshot.forEach(d => {
+          allS.push({ id: d.id, ...d.data() } as StoreItem);
+        });
+        setStoreItems(allS);
+      } catch (err) {
+        console.error("Error fetching store items", err);
+      }
+    };
+    fetchStoreItems();
+  }, []);
 
   return (
     <div className="flex flex-col w-full min-h-screen pb-24 bg-black">

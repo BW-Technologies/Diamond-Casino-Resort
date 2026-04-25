@@ -1,81 +1,104 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import HeroSection from '../components/HeroSection';
 import Modal from '../components/ui/Modal';
 import { getAssetUrl } from '../lib/utils';
-
-const VIP_TIERS = [
-  {
-    level: "SILVER",
-    color: "from-gray-400 to-gray-200",
-    price: "$500",
-    benefits: [
-      "Accès aux jeux de table standards",
-      "Service de voiturier de courtoisie",
-      "Stationnement privé niveau 1"
-    ],
-    modalContent: (
-      <>
-        <p>Notre carte Silver vous ouvre les portes de l'expérience Diamond Casino & Resort de base. Ce n'est que le début d'un parcours inégalé.</p>
-        <ul className="list-disc pl-6 space-y-2 mt-4 text-gray-400">
-          <li>Accès illimité au complexe principal et aux machines à sous.</li>
-          <li>Service de voiturier 24h/24 et 7j/7 avec prise en charge immédiate.</li>
-          <li>Accès aux tables de jeu à marge modérée.</li>
-        </ul>
-      </>
-    )
-  },
-  {
-    level: "GOLD",
-    color: "from-amber-400 to-yellow-600",
-    price: "$1,500,000",
-    popular: true,
-    benefits: [
-      "Salles de jeux à hautes mises",
-      "Service de limousine personnel",
-      "Hébergement VIP de luxe",
-      "Garde-robe de créateur exclusive",
-      "Agent d'entretien à disposition"
-    ],
-    modalContent: (
-      <>
-        <p>Le statut Gold est réservé à ceux qui attendent plus de la vie et savent l'obtenir. De votre arrivée à votre départ, chaque once de votre volonté est exaucée.</p>
-        <ul className="list-disc pl-6 space-y-2 mt-4 text-gray-400">
-          <li><strong>Service de Limousine:</strong> Appelez et nous serons là. Déplacement gratuit dans tout Los Santos.</li>
-          <li><strong>Hautes Mises:</strong> Salles privées loin des regards indiscrets.</li>
-          <li><strong>Agent personnel:</strong> Nettoyage gratuit de votre Penthouse et gestion de vos besoins immédiats.</li>
-        </ul>
-      </>
-    )
-  },
-  {
-    level: "DIAMOND",
-    color: "from-fuchsia-600 to-purple-400",
-    price: "Sur Invitation",
-    benefits: [
-      "Penthouse de Maître unique",
-      "Bureau de direction privé",
-      "Garage de prestige (10 places)",
-      "Spa et centre de bien-être privé",
-      "Accès prioritaire absolu",
-      "Conciergerie et barman 24/7"
-    ],
-    modalContent: (
-      <>
-        <p>Le statut ultime. Un monde où l'argent n'est plus un sujet de discussion. L'adhésion Diamond s'obtient exclusivement sur invitation et offre l'accès inconditionnel à tout le complexe.</p>
-        <ul className="list-disc pl-6 space-y-2 mt-4 text-gray-400">
-          <li><strong>Hélicoptère personnel:</strong> Accès illimité au service de transport aérien privé depuis le toit du Diamond.</li>
-          <li><strong>L'Éden Privé:</strong> Un Penthouse sur mesure avec spa, cinéma privé, et espace d'arcade personnel.</li>
-          <li><strong>Barman & Concierge:</strong> A votre service jour et nuit. Une fête improvisée ou un besoin inattendu ? C'est déjà fait.</li>
-          <li><strong>Accès de Maître:</strong> Jamais d'attente. Nulle part. En aucune circonstance. Vous êtes le maître des lieux.</li>
-        </ul>
-      </>
-    )
-  }
-];
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export default function Membership() {
-  const [selectedTier, setSelectedTier] = useState<typeof VIP_TIERS[0] | null>(null);
+  const [selectedTier, setSelectedTier] = useState<any | null>(null);
+  const [prices, setPrices] = useState({ silver: "$500", gold: "$1,500,000", diamond: "Sur Invitation" });
+
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const docRef = doc(db, 'settings', 'membership');
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          setPrices({
+            silver: data.silver || "$500",
+            gold: data.gold || "$1,500,000",
+            diamond: data.diamond || "Sur Invitation"
+          });
+        }
+      } catch (err) {
+        console.error("Impossible de charger les tarifs", err);
+      }
+    };
+    fetchPrices();
+  }, []);
+
+  const VIP_TIERS = [
+    {
+      level: "SILVER",
+      color: "from-gray-400 to-gray-200",
+      price: prices.silver,
+      benefits: [
+        "Accès aux jeux de table standards",
+        "Service de voiturier de courtoisie",
+        "Stationnement privé niveau 1"
+      ],
+      modalContent: (
+        <>
+          <p>Notre carte Silver vous ouvre les portes de l'expérience Diamond Casino & Resort de base. Ce n'est que le début d'un parcours inégalé.</p>
+          <ul className="list-disc pl-6 space-y-2 mt-4 text-gray-400">
+            <li>Accès illimité au complexe principal et aux machines à sous.</li>
+            <li>Service de voiturier 24h/24 et 7j/7 avec prise en charge immédiate.</li>
+            <li>Accès aux tables de jeu à marge modérée.</li>
+          </ul>
+        </>
+      )
+    },
+    {
+      level: "GOLD",
+      color: "from-amber-400 to-yellow-600",
+      price: prices.gold,
+      popular: true,
+      benefits: [
+        "Salles de jeux à hautes mises",
+        "Service de limousine personnel",
+        "Hébergement VIP de luxe",
+        "Garde-robe de créateur exclusive",
+        "Agent d'entretien à disposition"
+      ],
+      modalContent: (
+        <>
+          <p>Le statut Gold est réservé à ceux qui attendent plus de la vie et savent l'obtenir. De votre arrivée à votre départ, chaque once de votre volonté est exaucée.</p>
+          <ul className="list-disc pl-6 space-y-2 mt-4 text-gray-400">
+            <li><strong>Service de Limousine:</strong> Appelez et nous serons là. Déplacement gratuit dans tout Los Santos.</li>
+            <li><strong>Hautes Mises:</strong> Salles privées loin des regards indiscrets.</li>
+            <li><strong>Agent personnel:</strong> Nettoyage gratuit de votre Penthouse et gestion de vos besoins immédiats.</li>
+          </ul>
+        </>
+      )
+    },
+    {
+      level: "DIAMOND",
+      color: "from-fuchsia-600 to-purple-400",
+      price: prices.diamond,
+      benefits: [
+        "Penthouse de Maître unique",
+        "Bureau de direction privé",
+        "Garage de prestige (10 places)",
+        "Spa et centre de bien-être privé",
+        "Accès prioritaire absolu",
+        "Conciergerie et barman 24/7"
+      ],
+      modalContent: (
+        <>
+          <p>Le statut ultime. Un monde où l'argent n'est plus un sujet de discussion. L'adhésion Diamond s'obtient exclusivement sur invitation et offre l'accès inconditionnel à tout le complexe.</p>
+          <ul className="list-disc pl-6 space-y-2 mt-4 text-gray-400">
+            <li><strong>Hélicoptère personnel:</strong> Accès illimité au service de transport aérien privé depuis le toit du Diamond.</li>
+            <li><strong>L'Éden Privé:</strong> Un Penthouse sur mesure avec spa, cinéma privé, et espace d'arcade personnel.</li>
+            <li><strong>Barman & Concierge:</strong> A votre service jour et nuit. Une fête improvisée ou un besoin inattendu ? C'est déjà fait.</li>
+            <li><strong>Accès de Maître:</strong> Jamais d'attente. Nulle part. En aucune circonstance. Vous êtes le maître des lieux.</li>
+          </ul>
+        </>
+      )
+    }
+  ];
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-black overflow-hidden">
