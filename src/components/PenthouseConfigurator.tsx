@@ -1,474 +1,414 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { collection, addDoc, doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
-import { Check, X, ChevronRight, ChevronLeft, Calendar } from 'lucide-react';
+import { getAssetUrl } from '../lib/utils';
+import { Check, X, ChevronRight, ChevronLeft, Calendar, Sparkles, Crown, Star } from 'lucide-react';
 
+/* ─── DATA ─── */
 const STYLES = [
-  { id: 'sharp', name: 'Sharp (Épuré)', pricePerNight: 0, image: 'https://static.wikia.nocookie.net/gtawiki/images/a/a8/MasterPenthouse-GTAO-Colours-Sharp.png/revision/latest/scale-to-width-down/200?cb=20200421194804' },
-  { id: 'timeless', name: 'Timeless (Intemporel)', pricePerNight: 2000, image: 'https://static.wikia.nocookie.net/gtawiki/images/1/1b/MasterPenthouse-GTAO-Colours-Timeless.png/revision/latest/scale-to-width-down/200?cb=20200421194804' },
-  { id: 'vibrant', name: 'Vibrant (Vibrant)', pricePerNight: 5000, image: 'https://static.wikia.nocookie.net/gtawiki/images/2/2c/MasterPenthouse-GTAO-Colours-Vibrant.png/revision/latest/scale-to-width-down/200?cb=20191102110145' }
+  { id: 'timeless', name: 'Timeless', subtitle: 'Élégance intemporelle', price: 0, image: '/style-timeless.png', desc: 'Des tons chauds et terreux — brun profond, beige taupe, lavande douce. Un classique indémodable qui respire la sophistication.' },
+  { id: 'vibrant', name: 'Vibrant', subtitle: 'Audace chromatique', price: 5000, image: '/style-vibrant.png', desc: 'Magenta, bleu électrique, touches de jaune vif. Pour ceux qui veulent que leur intérieur reflète leur personnalité flamboyante.' },
+  { id: 'sharp', name: 'Sharp', subtitle: 'Minimalisme raffiné', price: 3000, image: '/style-sharp.png', desc: 'Noir profond, chocolat, crème. Un design épuré et tranchant pour les esprits les plus affûtés de Los Santos.' },
 ];
 
 const ADDONS = [
-  { id: 'lounge', name: 'Espace Lounge & Arcade', pricePerNight: 10000, desc: 'Bornes d\'arcade, bar complet et espace de vie.', images: ['https://static.wikia.nocookie.net/gtawiki/images/f/f4/MasterPenthouse-GTAO-Options-LoungeArea.png/revision/latest/scale-to-width-down/1000?cb=20210110105627', 'https://static.wikia.nocookie.net/gtawiki/images/e/eb/MasterPenthouse-GTAO-Options-BarandPartyHub.png/revision/latest/scale-to-width-down/1000?cb=20210110105827'] },
-  { id: 'media', name: 'Salle de Médias', pricePerNight: 8000, desc: 'Cinéma privé avec écran géant incurvé.', images: ['https://static.wikia.nocookie.net/gtawiki/images/0/0a/MasterPenthouse-GTAO-Options-MediaRoom.png/revision/latest/scale-to-width-down/1000?cb=20210110105647'] },
-  { id: 'spa', name: 'Spa Privé', pricePerNight: 15000, desc: 'Jacuzzi avec vue, sauna et thérapeutes.', images: ['https://static.wikia.nocookie.net/gtawiki/images/c/c8/MasterPenthouse-GTAO-Options-Spa.png/revision/latest/scale-to-width-down/1000?cb=20210110105715'] },
-  { id: 'croupier', name: 'Croupier Privé', pricePerNight: 20000, desc: 'Table de Blackjack/Poker 24h/24.', images: ['https://static.wikia.nocookie.net/gtawiki/images/1/1e/MasterPenthouse-GTAO-Options-PrivateDealer.png/revision/latest/scale-to-width-down/1000?cb=20210110105845'] },
-  { id: 'office', name: 'Bureau Sécurisé', pricePerNight: 5000, desc: 'Accès SecuroServ, coffre-fort mural et armurerie.', images: ['https://static.wikia.nocookie.net/gtawiki/images/a/a7/MasterPenthouse-GTAO-Options-Office.png/revision/latest/scale-to-width-down/1000?cb=20210110105902'] },
-  { id: 'guest', name: 'Suite d\'invités', pricePerNight: 10000, desc: 'Chambre séparée avec salle de bain en marbre.', images: ['https://static.wikia.nocookie.net/gtawiki/images/3/3f/MasterPenthouse-GTAO-Options-ExtraBedroom.png/revision/latest/scale-to-width-down/1000?cb=20210110105920'] },
-  { id: 'garage', name: 'Garage Privé', pricePerNight: 5000, desc: '10 places de parking avec service voiturier.', images: ['https://static.wikia.nocookie.net/gtawiki/images/9/96/MasterPenthouse-GTAO-Options-Garage.png/revision/latest/scale-to-width-down/1000?cb=20210110105936'] }
+  { id: 'lounge', name: 'Espace Lounge & Arcade', pricePerNight: 10000, desc: 'Bornes d\'arcade rétro, bar complet H24 et espace de vie pour des soirées inoubliables. Personnalisez les couleurs fluo et le mobilier.', image: '/penthouse-lounge.png', image2: '/penthouse-bar.png' },
+  { id: 'media', name: 'Salle de Médias', pricePerNight: 7500, desc: 'Cinéma privé avec écran géant incurvé et système THX immersif. Idéal pour les avant-premières et les réunions confidentielles.', image: '/penthouse-media.png' },
+  { id: 'spa', name: 'Spa Thermal Privé', pricePerNight: 15000, desc: 'Jacuzzi avec vue panoramique sur Los Santos, sauna en cèdre et service de massage à la demande. Votre sanctuaire personnel.', image: '/penthouse-spa.png' },
+  { id: 'croupier', name: 'Croupier Privé', pricePerNight: 12000, desc: 'Table de Blackjack et Poker haute limite installée dans votre salon. Un croupier professionnel à votre disposition 24h/24.', image: '/penthouse-dealer.png' },
+  { id: 'office', name: 'Bureau Sécurisé', pricePerNight: 8000, desc: 'Accès SecuroServ, coffre-fort mural dissimulé et armurerie privée avec espace de modification pour vos équipements.', image: '/penthouse-office.png' },
+  { id: 'guest', name: 'Suite d\'Invités', pricePerNight: 9000, desc: 'Chambre luxueuse séparée avec salle de bain en marbre et vue sur la skyline. L\'hospitalité portée à l\'art.', image: '/penthouse-guest.png' },
+  { id: 'garage', name: 'Garage & Voiturier', pricePerNight: 5000, desc: '10 places de parking sécurisées avec service voiturier premium. L\'écrin parfait pour vos véhicules d\'exception.', image: '/penthouse-garage.png' },
 ];
 
-export default function PenthouseConfigurator({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
+const STEPS = [
+  { id: 'welcome', title: 'Suite de Maître' },
+  { id: 'dates', title: 'Dates de séjour' },
+  { id: 'style', title: 'Style & Décoration' },
+  { id: 'addons', title: 'Options Premium' },
+  { id: 'summary', title: 'Récapitulatif' },
+];
+
+/* ─── HELPERS ─── */
+function formatDate(d: Date) {
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+function daysBetween(a: Date, b: Date) {
+  return Math.max(1, Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24)));
+}
+function toInputDate(d: Date) {
+  return d.toISOString().split('T')[0];
+}
+
+/* ─── COMPONENT ─── */
+export default function PenthouseConfigurator({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<any>(null);
-  const [baseNightlyRate, setBaseNightlyRate] = useState<number>(50000); // Int number for math
-  
-  const [activeStep, setActiveStep] = useState(0);
+
+  const [step, setStep] = useState(0);
   const [selectedStyle, setSelectedStyle] = useState(STYLES[0]);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
-  
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [checkIn, setCheckIn] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d; });
+  const [checkOut, setCheckOut] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 4); return d; });
+  const [status, setStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error'; msg: string }>({ type: 'idle', msg: '' });
+  const [direction, setDirection] = useState(1);
 
-  const [status, setStatus] = useState<{type: 'idle' | 'loading' | 'success' | 'error', msg: string}>({ type: 'idle', msg: '' });
+  const nights = useMemo(() => daysBetween(checkIn, checkOut), [checkIn, checkOut]);
+
+  // Base rate per night
+  const basePricePerNight = 50000;
+  const stylePricePerNight = selectedStyle.price;
+  const addonsPricePerNight = selectedAddons.reduce((s, id) => {
+    const a = ADDONS.find(x => x.id === id);
+    return s + (a ? a.pricePerNight : 0);
+  }, 0);
+  const totalPerNight = basePricePerNight + stylePricePerNight + addonsPricePerNight;
+  const grandTotal = totalPerNight * nights;
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const memDoc = await getDoc(doc(db, 'settings', 'membership'));
-        if (memDoc.exists() && memDoc.data().penthouseNight) {
-          // parse string like "$50,000" to number
-          const numStr = memDoc.data().penthouseNight.replace(/[^0-9]/g, '');
-          if (numStr) setBaseNightlyRate(parseInt(numStr, 10));
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchSettings();
-
-    const unsub = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        const docSnap = await getDoc(doc(db, 'users', currentUser.uid));
-        if (docSnap.exists()) setUserData(docSnap.data());
-      } else {
-        setUserData(null);
-      }
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      if (u) {
+        const snap = await getDoc(doc(db, 'users', u.uid));
+        if (snap.exists()) setUserData(snap.data());
+      } else setUserData(null);
     });
     return () => unsub();
   }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
-      setActiveStep(0);
+      setStep(0);
       setSelectedStyle(STYLES[0]);
       setSelectedAddons([]);
-      setStartDate('');
-      setEndDate('');
       setStatus({ type: 'idle', msg: '' });
+      const d1 = new Date(); d1.setDate(d1.getDate() + 1);
+      const d2 = new Date(); d2.setDate(d2.getDate() + 4);
+      setCheckIn(d1); setCheckOut(d2);
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
 
   const toggleAddon = (id: string) => {
-    if (selectedAddons.includes(id)) {
-      setSelectedAddons(selectedAddons.filter(a => a !== id));
-    } else {
-      setSelectedAddons([...selectedAddons, id]);
-    }
+    setSelectedAddons(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const addonsNightlyTotal = selectedAddons.reduce((acc, currentId) => {
-    const addon = ADDONS.find(a => a.id === currentId);
-    return acc + (addon ? addon.pricePerNight : 0);
-  }, 0);
-  
-  const totalNightlyPrice = baseNightlyRate + selectedStyle.pricePerNight + addonsNightlyTotal;
-
-  const calculateNights = () => {
-    if (!startDate || !endDate) return 1;
-    const s = new Date(startDate);
-    const e = new Date(endDate);
-    const diff = (e.getTime() - s.getTime()) / (1000 * 3600 * 24);
-    return diff > 0 ? diff : 1;
+  const goTo = (idx: number) => {
+    setDirection(idx > step ? 1 : -1);
+    setStep(idx);
   };
-
-  const nights = calculateNights();
-  const totalStayPrice = totalNightlyPrice * nights;
-
-  const menuSteps = [
-    { title: "SUITE DE MAÎTRE", type: 'intro' },
-    { title: "DATES DU SÉJOUR", type: 'dates' },
-    { title: "STYLE ET DÉCORATION", type: 'style' },
-    ...ADDONS.map(a => ({ title: a.name.toUpperCase(), type: 'addon', addonId: a.id })),
-    { title: "RÉSUMÉ", type: 'summary' }
-  ];
 
   const handleSubmit = async () => {
-    if (!user || !userData) {
-      setStatus({ type: 'error', msg: 'Vous devez être connecté.' });
-      return;
+    if (!user || !userData) { setStatus({ type: 'error', msg: 'Vous devez être connecté.' }); return; }
+    if (!['vip', 'patron', 'employe'].includes(userData.role) && !userData.isVip) {
+      setStatus({ type: 'error', msg: 'Seuls les membres VIP peuvent réserver un Penthouse.' }); return;
     }
-    if (userData.role !== 'vip' && userData.role !== 'patron' && userData.role !== 'employe' && !userData.isVip) {
-      setStatus({ type: 'error', msg: 'Seuls les membres VIP (Gold, Diamond) peuvent configurer et demander un Penthouse.' });
-      return;
-    }
-    if (!startDate || !endDate) {
-      setStatus({ type: 'error', msg: 'Veuillez sélectionner vos dates de séjour.' });
-      return;
-    }
-
     setStatus({ type: 'loading', msg: 'Envoi de votre réservation...' });
     try {
-      const configuration = {
-        style: selectedStyle,
-        addons: selectedAddons.map(id => ADDONS.find(a => a.id === id)),
-        nightlyPrice: totalNightlyPrice,
-        totalPrice: totalStayPrice, // We store total price
-        startDate,
-        endDate,
-        nights
-      };
-
       await addDoc(collection(db, 'penthouseRequests'), {
         userId: user.uid,
-        userName: userData.displayName || 'Utilisateur inconnu',
+        userName: userData.displayName || 'Utilisateur',
         userEmail: user.email,
-        configuration,
+        configuration: {
+          style: selectedStyle,
+          addons: selectedAddons.map(id => ADDONS.find(a => a.id === id)),
+          totalPerNight,
+          totalPrice: grandTotal,
+          nights,
+          checkIn: checkIn.toISOString(),
+          checkOut: checkOut.toISOString(),
+        },
         status: 'pending',
-        createdAt: Date.now()
+        createdAt: Date.now(),
       });
-      
-      setStatus({ type: 'success', msg: 'Demande envoyée ! Vous pouvez suivre son statut dans votre Espace VIP.' });
+      setStatus({ type: 'success', msg: 'Réservation envoyée avec succès ! La direction étudiera votre demande.' });
     } catch (err: any) {
-      console.error(err);
-      setStatus({ type: 'error', msg: 'Une erreur est survenue lors de l\'envoi.' });
+      setStatus({ type: 'error', msg: 'Erreur lors de l\'envoi.' });
     }
   };
 
-  const renderStepContent = () => {
-    const stepDef = menuSteps[activeStep];
-    
-    if (stepDef.type === 'intro') {
-      return (
-        <motion.div key="intro" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:1.05}} className="flex flex-col h-full bg-black relative p-8 md:p-16 overflow-y-auto w-full">
-           <div className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none">
-             <img src="https://static.wikia.nocookie.net/gtawiki/images/f/fe/MasterPenthouse-GTAO-Options-MasterPenthouse.png/revision/latest/scale-to-width-down/1000?cb=20210110105607" alt="bg" className="w-full h-full object-cover" />
-             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent"></div>
-           </div>
-           
-           <div className="relative z-10 max-w-4xl mx-auto flex flex-col justify-center min-h-full">
-             <div className="mb-4 flex items-center gap-4">
-                <div className="h-[2px] w-12 bg-[#9300c4]"></div>
-                <span className="font-oswald text-[#9300c4] uppercase tracking-[0.3em] text-sm">Bienvenue au sommet</span>
-             </div>
-             <h2 className="font-oswald text-5xl md:text-7xl font-black uppercase tracking-tight text-white mb-8">
-               PENTHOUSE <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#9300c4] to-amber-500">DE MAÎTRE</span>
-             </h2>
-             
-             <div className="aspect-video w-full rounded-xl overflow-hidden mb-8 border border-white/10 shadow-2xl relative">
-                <img src="https://static.wikia.nocookie.net/gtawiki/images/f/fe/MasterPenthouse-GTAO-Options-MasterPenthouse.png/revision/latest/scale-to-width-down/1000?cb=20210110105607" alt="Intro" className="w-full h-full object-cover" />
-             </div>
-             
-             <p className="font-sans text-gray-300 text-lg md:text-xl leading-relaxed mb-8 max-w-3xl font-light">
-               Concevez l'espace le plus exclusif de Los Santos au gré de vos envies. Du mobilier aux espaces récréatifs, chaque détail a été pensé pour offrir un standard de luxe inégalé.
-             </p>
-             
-             <div className="bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-xl inline-block max-w-sm">
-                <p className="font-oswald text-sm text-gray-400 uppercase tracking-widest mb-1">Prix de location de base (Par Nuit)</p>
-                <p className="font-oswald text-4xl text-white tracking-widest">${baseNightlyRate.toLocaleString()}</p>
-             </div>
-           </div>
-        </motion.div>
-      );
-    }
+  /* ── Variants ── */
+  const slideVariants = {
+    enter: (dir: number) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
+  };
 
-    if (stepDef.type === 'dates') {
-      return (
-        <motion.div key="dates" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:1.05}} className="flex flex-col h-full bg-black relative p-8 md:p-16 overflow-y-auto w-full">
-           <div className="relative z-10 max-w-4xl mx-auto w-full flex flex-col justify-center min-h-full">
-             <div className="mb-4 flex items-center gap-4">
-                <div className="h-[2px] w-12 bg-amber-500"></div>
-                <span className="font-oswald text-amber-500 uppercase tracking-[0.3em] text-sm">Disponibilités</span>
-             </div>
-             <h2 className="font-oswald text-5xl font-black uppercase tracking-tight text-white mb-12">
-               DATES DU <span className="text-[#9300c4]">SÉJOUR</span>
-             </h2>
+  /* ── Render steps ── */
+  const renderStep = () => {
+    const key = STEPS[step].id;
 
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               <div className="bg-white/5 border border-white/10 p-8 rounded-xl backdrop-blur-sm">
-                 <label className="block font-oswald text-gray-400 uppercase tracking-widest text-sm mb-4 flex items-center gap-2"><Calendar className="w-4 h-4"/> Date d'arrivée</label>
-                 <input 
-                   type="date" 
-                   value={startDate} 
-                   onChange={(e) => setStartDate(e.target.value)}
-                   className="w-full bg-black/50 border border-white/20 text-white p-4 font-sans focus:border-[#9300c4] outline-none rounded-lg" 
-                   min={new Date().toISOString().split('T')[0]}
-                 />
-               </div>
-               <div className="bg-white/5 border border-white/10 p-8 rounded-xl backdrop-blur-sm">
-                 <label className="block font-oswald text-gray-400 uppercase tracking-widest text-sm mb-4 flex items-center gap-2"><Calendar className="w-4 h-4"/> Date de départ</label>
-                 <input 
-                   type="date" 
-                   value={endDate} 
-                   onChange={(e) => setEndDate(e.target.value)}
-                   className="w-full bg-black/50 border border-white/20 text-white p-4 font-sans focus:border-[#9300c4] outline-none rounded-lg" 
-                   min={startDate || new Date().toISOString().split('T')[0]}
-                 />
-               </div>
-             </div>
+    if (key === 'welcome') return (
+      <motion.div key="welcome" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.35 }} className="cfg-panel">
+        <div className="cfg-panel-inner">
+          <div className="cfg-badge"><Crown className="w-4 h-4" /> COLLECTION EXCLUSIVE</div>
+          <h2 className="cfg-title">Penthouse<br /><span className="cfg-title-accent">de Maître</span></h2>
+          <p className="cfg-desc">
+            Bienvenue dans le configurateur du Diamond Casino & Resort. Personnalisez le penthouse le plus exclusif de Los Santos
+            selon vos envies — du style intérieur aux équipements haut de gamme. Chaque option influence votre tarif par nuit.
+          </p>
+          <div className="cfg-hero-img-wrap">
+            <img src={getAssetUrl('/penthouse-master-bedroom.png')} alt="Suite de Maître" className="cfg-hero-img" />
+            <div className="cfg-hero-img-overlay" />
+          </div>
+          <div className="cfg-price-block">
+            <div className="cfg-price-label">À partir de</div>
+            <div className="cfg-price-value">${basePricePerNight.toLocaleString()} <span className="cfg-price-unit">/ nuit</span></div>
+          </div>
+        </div>
+      </motion.div>
+    );
 
-             {startDate && endDate && (
-               <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} className="mt-12 text-center bg-[#9300c4]/10 border border-[#9300c4]/30 p-8 rounded-xl inline-block mx-auto">
-                 <p className="font-oswald text-amber-500 uppercase tracking-widest text-xl">Durée du séjour</p>
-                 <p className="font-oswald text-white text-5xl font-black mt-2">{nights} Nuit{nights > 1 ? 's' : ''}</p>
-               </motion.div>
-             )}
-           </div>
-        </motion.div>
-      );
-    }
-    
-    if (stepDef.type === 'style') {
-      return (
-        <motion.div key="style" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:1.05}} className="flex flex-col h-full bg-black relative p-8 md:p-16 overflow-y-auto w-full">
-          <div className="relative z-10 max-w-6xl mx-auto w-full">
-            <h2 className="font-oswald text-5xl font-black uppercase tracking-tight text-white mb-4">
-              CHOISISSEZ VOTRE <span className="text-[#9300c4]">STYLE</span>
-            </h2>
-            <p className="font-sans text-gray-400 mb-12 max-w-2xl text-lg">La couleur est la clé de voûte de toute décoration d'intérieur. Sélectionnez la palette qui reflète au mieux votre personnalité.</p>
-            
-            <div className="flex flex-col gap-6">
-              {STYLES.map(style => (
-                <div 
-                  key={style.id} 
-                  onClick={() => setSelectedStyle(style)}
-                  className={`group relative cursor-pointer border-2 transition-all rounded-xl overflow-hidden bg-black flex flex-col md:flex-row ${selectedStyle.id === style.id ? 'border-[#9300c4] ring-4 ring-[#9300c4]/20' : 'border-white/10 hover:border-white/30'}`}
-                >
-                  <div className="md:w-1/3 flex items-center justify-center p-8 bg-black/40 backdrop-blur-md z-10 border-b md:border-b-0 md:border-r border-white/10">
-                    <div className="text-center md:text-left w-full">
-                      <p className="font-oswald tracking-widest uppercase text-3xl font-black text-white mb-2 group-hover:text-[#9300c4] transition-colors">{style.name}</p>
-                      <p className="font-oswald text-lg text-amber-500 tracking-widest">{style.pricePerNight === 0 ? 'Gratuit' : `+$${style.pricePerNight.toLocaleString()} / Nuit`}</p>
-                    </div>
-                  </div>
-                  <div className="md:w-2/3 h-32 md:h-48 relative overflow-hidden flex items-center justify-center bg-[#111]">
-                     {/* Scale up to fit nicely without stretching weirdly, object-cover takes care of it */}
-                    <img src={style.image} alt={style.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />
-                  </div>
-                  
-                  {selectedStyle.id === style.id && (
-                    <div className="absolute top-4 left-4 md:top-1/2 md:-translate-y-1/2 md:right-auto md:left-4 z-20 bg-[#9300c4] text-white p-2 rounded-full shadow-[0_0_20px_rgba(147,0,196,0.5)]">
-                      <Check className="w-6 h-6" />
-                    </div>
-                  )}
-                </div>
-              ))}
+    if (key === 'dates') return (
+      <motion.div key="dates" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.35 }} className="cfg-panel">
+        <div className="cfg-panel-inner">
+          <div className="cfg-badge"><Calendar className="w-4 h-4" /> PLANIFIEZ VOTRE SÉJOUR</div>
+          <h2 className="cfg-title">Dates de<br /><span className="cfg-title-accent">Réservation</span></h2>
+          <p className="cfg-desc">Sélectionnez vos dates d'arrivée et de départ. Le tarif final sera calculé en fonction du nombre de nuits.</p>
+
+          <div className="cfg-dates-grid">
+            <div className="cfg-date-card">
+              <label className="cfg-date-label">Date d'arrivée</label>
+              <input
+                type="date"
+                value={toInputDate(checkIn)}
+                min={toInputDate(new Date())}
+                onChange={e => {
+                  const d = new Date(e.target.value);
+                  setCheckIn(d);
+                  if (d >= checkOut) { const d2 = new Date(d); d2.setDate(d2.getDate() + 1); setCheckOut(d2); }
+                }}
+                className="cfg-date-input"
+              />
+              <div className="cfg-date-display">{formatDate(checkIn)}</div>
+            </div>
+            <div className="cfg-date-separator">
+              <ChevronRight className="w-5 h-5 text-[#9300c4]" />
+              <span className="cfg-nights-badge">{nights} nuit{nights > 1 ? 's' : ''}</span>
+              <ChevronRight className="w-5 h-5 text-[#9300c4]" />
+            </div>
+            <div className="cfg-date-card">
+              <label className="cfg-date-label">Date de départ</label>
+              <input
+                type="date"
+                value={toInputDate(checkOut)}
+                min={toInputDate(new Date(checkIn.getTime() + 86400000))}
+                onChange={e => setCheckOut(new Date(e.target.value))}
+                className="cfg-date-input"
+              />
+              <div className="cfg-date-display">{formatDate(checkOut)}</div>
             </div>
           </div>
-        </motion.div>
-      );
-    }
-    
-    if (stepDef.type === 'addon') {
-      const addon = ADDONS.find(a => a.id === stepDef.addonId)!;
-      const isSelected = selectedAddons.includes(addon.id);
-      return (
-        <motion.div key={addon.id} initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:1.05}} className="flex flex-col h-full bg-black relative p-8 md:p-16 overflow-y-auto w-full">
-           <div className="relative z-10 max-w-6xl mx-auto w-full h-full flex flex-col justify-center">
-             <div className="flex flex-col md:flex-row gap-12 items-center">
-               <div className="md:w-1/2 w-full">
-                 <div className="mb-4 flex items-center gap-4">
-                    <div className="h-[2px] w-12 bg-[#9300c4]"></div>
-                    <span className="font-oswald text-[#9300c4] uppercase tracking-[0.3em] text-sm">Aménagement Optionnel</span>
-                 </div>
-                 <h2 className="font-oswald text-5xl md:text-6xl font-black uppercase tracking-tight text-white mb-6 leading-none">
-                   {addon.name}
-                 </h2>
-                 <p className="font-sans text-gray-300 text-xl leading-relaxed mb-8 font-light">{addon.desc}</p>
-                 
-                 <div className="bg-white/5 border border-white/10 p-6 rounded-xl inline-block mb-12 backdrop-blur-sm">
-                   <p className="font-oswald text-amber-500 text-sm tracking-widest uppercase mb-1">Supplément journalier</p>
-                   <p className="font-oswald text-4xl text-white tracking-widest">+$${addon.pricePerNight.toLocaleString()} <span className="text-xl text-gray-500">/ NUIT</span></p>
-                 </div>
-                 
-                 <div>
-                   <button 
-                     onClick={() => toggleAddon(addon.id)}
-                     className={`w-full md:w-auto px-10 py-5 rounded-lg border-2 font-oswald text-lg uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 shadow-2xl ${isSelected ? 'border-red-500 bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'border-[#9300c4] bg-[#9300c4]/10 text-white hover:bg-[#9300c4] hover:shadow-[0_0_30px_rgba(147,0,196,0.6)]'}`}
-                   >
-                     {isSelected ? <><X className="w-6 h-6" /> RETIRER L'OPTION</> : <><Check className="w-6 h-6" /> SÉLECTIONNER L'OPTION</>}
-                   </button>
-                 </div>
-               </div>
-               
-               <div className="md:w-1/2 w-full flex flex-col gap-4">
-                 {addon.images.map((img, idx) => (
-                    <div key={idx} className="aspect-video w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative group">
-                      <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-10"></div>
-                      <img src={img} alt={addon.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
-                    </div>
-                 ))}
-               </div>
-             </div>
-           </div>
-        </motion.div>
-      );
-    }
-    
-    if (stepDef.type === 'summary') {
-      return (
-        <motion.div key="summary" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:1.05}} className="flex flex-col h-full bg-black relative p-8 md:p-16 overflow-y-auto w-full">
-          <div className="relative z-10 max-w-4xl mx-auto w-full">
-            <h2 className="font-oswald text-5xl font-black uppercase tracking-tight text-[#9300c4] mb-12 text-center">RÉSUMÉ DE LA RÉSERVATION</h2>
-            
-            <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 md:p-12 shadow-2xl">
-              <div className="grid md:grid-cols-2 gap-12 mb-12 border-b border-white/10 pb-12">
-                <div>
-                   <h3 className="font-oswald text-gray-500 tracking-[0.2em] uppercase text-sm mb-4">Dates du Séjour</h3>
-                   <div className="bg-white/5 rounded-lg p-4 font-sans text-white text-lg">
-                     {startDate ? new Date(startDate).toLocaleDateString('fr-FR') : 'Non défini'} <br/>
-                     <span className="text-[#9300c4]">au</span> <br/>
-                     {endDate ? new Date(endDate).toLocaleDateString('fr-FR') : 'Non défini'}
-                   </div>
-                   <p className="font-oswald text-amber-500 mt-2 tracking-widest">{nights} Nuit(s)</p>
-                </div>
-                <div>
-                  <h3 className="font-oswald text-gray-500 tracking-[0.2em] uppercase text-sm mb-4">Détails Journaliers</h3>
-                  <div className="space-y-3 font-sans text-base">
-                    <div className="flex justify-between items-center text-gray-300">
-                      <span>Suite de Maître (Base)</span>
-                      <span className="font-mono text-white">${baseNightlyRate.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-gray-300">
-                      <span>Style: {selectedStyle.name}</span>
-                      <span className="font-mono text-white">{selectedStyle.pricePerNight === 0 ? 'Inclus' : `+$${selectedStyle.pricePerNight.toLocaleString()}`}</span>
-                    </div>
-                    {selectedAddons.map(id => {
-                      const addon = ADDONS.find(a => a.id === id)!;
-                      return (
-                        <div key={id} className="flex justify-between items-center text-amber-500/80">
-                          <span>{addon.name}</span>
-                          <span className="font-mono text-amber-500">+$${addon.pricePerNight.toLocaleString()}</span>
-                        </div>
-                      )
-                    })}
+
+          <div className="cfg-price-block" style={{ marginTop: 'auto' }}>
+            <div className="cfg-price-label">Durée du séjour</div>
+            <div className="cfg-price-value">{nights} <span className="cfg-price-unit">nuit{nights > 1 ? 's' : ''}</span></div>
+          </div>
+        </div>
+      </motion.div>
+    );
+
+    if (key === 'style') return (
+      <motion.div key="style" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.35 }} className="cfg-panel">
+        <div className="cfg-panel-inner">
+          <div className="cfg-badge"><Sparkles className="w-4 h-4" /> AMBIANCE & COULEURS</div>
+          <h2 className="cfg-title">Choisissez votre<br /><span className="cfg-title-accent">Style</span></h2>
+          <div className="cfg-styles-grid">
+            {STYLES.map(s => {
+              const active = selectedStyle.id === s.id;
+              return (
+                <button key={s.id} onClick={() => setSelectedStyle(s)} className={`cfg-style-card ${active ? 'cfg-style-active' : ''}`}>
+                  <div className="cfg-style-img-wrap">
+                    <img src={getAssetUrl(s.image)} alt={s.name} className="cfg-style-img" />
+                    {active && <div className="cfg-style-check"><Check className="w-4 h-4" /></div>}
                   </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col items-center">
-                <p className="font-oswald text-sm text-gray-500 uppercase tracking-[0.3em] mb-2">COÛT TOTAL ESTIMÉ DU SÉJOUR</p>
-                <p className="font-oswald text-6xl md:text-7xl font-black text-white tracking-tight mb-8">
-                  ${totalStayPrice.toLocaleString()}
-                </p>
-                <div className="bg-[#9300c4]/10 text-[#9300c4] px-6 py-2 rounded-full font-oswald tracking-widest text-sm mb-8 border border-[#9300c4]/30">
-                  SOIT ${totalNightlyPrice.toLocaleString()} / NUIT
-                </div>
-
-                {status.msg && (
-                  <div className={`w-full mb-8 p-6 text-sm font-sans rounded-xl text-center ${status.type === 'error' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : status.type === 'success' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-[#9300c4]/10 text-[#9300c4] border border-[#9300c4]/20'}`}>
-                    {status.msg}
+                  <div className="cfg-style-info">
+                    <div className="cfg-style-name">{s.name}</div>
+                    <div className="cfg-style-sub">{s.subtitle}</div>
+                    <div className="cfg-style-price">{s.price === 0 ? 'Inclus' : `+$${s.price.toLocaleString()}/nuit`}</div>
                   </div>
-                )}
-
-                <button 
-                  onClick={handleSubmit}
-                  disabled={status.type === 'loading' || status.type === 'success'}
-                  className="w-full max-w-md bg-gradient-to-r from-[#9300c4] to-[#600080] text-white font-oswald text-xl uppercase tracking-[0.2em] py-5 rounded-lg font-black hover:shadow-[0_0_40px_rgba(147,0,196,0.6)] hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  CONFIRMER LA RÉSERVATION
                 </button>
+              );
+            })}
+          </div>
+          {selectedStyle && (
+            <div className="cfg-style-detail">
+              <p>{selectedStyle.desc}</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+
+    if (key === 'addons') return (
+      <motion.div key="addons" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.35 }} className="cfg-panel">
+        <div className="cfg-panel-inner cfg-addons-inner">
+          <div className="cfg-badge"><Star className="w-4 h-4" /> PERSONNALISATION</div>
+          <h2 className="cfg-title">Options<br /><span className="cfg-title-accent">Premium</span></h2>
+          <div className="cfg-addons-grid">
+            {ADDONS.map(a => {
+              const active = selectedAddons.includes(a.id);
+              return (
+                <button key={a.id} onClick={() => toggleAddon(a.id)} className={`cfg-addon-card ${active ? 'cfg-addon-active' : ''}`}>
+                  <div className="cfg-addon-img-wrap">
+                    <img src={getAssetUrl(a.image)} alt={a.name} className="cfg-addon-img" />
+                    {active && <div className="cfg-addon-badge-check"><Check className="w-3 h-3" /></div>}
+                  </div>
+                  <div className="cfg-addon-body">
+                    <div className="cfg-addon-name">{a.name}</div>
+                    <div className="cfg-addon-desc">{a.desc}</div>
+                    <div className="cfg-addon-price">+${a.pricePerNight.toLocaleString()} <span>/nuit</span></div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </motion.div>
+    );
+
+    if (key === 'summary') return (
+      <motion.div key="summary" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.35 }} className="cfg-panel">
+        <div className="cfg-panel-inner cfg-summary-inner">
+          <h2 className="cfg-title">Récapitulatif<br /><span className="cfg-title-accent">& Confirmation</span></h2>
+
+          <div className="cfg-summary-section">
+            <div className="cfg-summary-row">
+              <div className="cfg-summary-row-left">
+                <img src={getAssetUrl('/penthouse-master-bedroom.png')} alt="Suite" className="cfg-summary-thumb" />
+                <div>
+                  <div className="cfg-summary-item-name">Suite de Maître (Base)</div>
+                  <div className="cfg-summary-item-sub">{formatDate(checkIn)} → {formatDate(checkOut)} · {nights} nuit{nights > 1 ? 's' : ''}</div>
+                </div>
               </div>
+              <div className="cfg-summary-item-price">${basePricePerNight.toLocaleString()}/nuit</div>
+            </div>
+
+            <div className="cfg-summary-row">
+              <div className="cfg-summary-row-left">
+                <img src={getAssetUrl(selectedStyle.image)} alt={selectedStyle.name} className="cfg-summary-thumb" />
+                <div>
+                  <div className="cfg-summary-item-name">Style : {selectedStyle.name}</div>
+                  <div className="cfg-summary-item-sub">{selectedStyle.subtitle}</div>
+                </div>
+              </div>
+              <div className="cfg-summary-item-price">{selectedStyle.price === 0 ? 'Inclus' : `+$${selectedStyle.price.toLocaleString()}/nuit`}</div>
+            </div>
+
+            {selectedAddons.map(id => {
+              const a = ADDONS.find(x => x.id === id)!;
+              return (
+                <div key={id} className="cfg-summary-row">
+                  <div className="cfg-summary-row-left">
+                    <img src={getAssetUrl(a.image)} alt={a.name} className="cfg-summary-thumb" />
+                    <div>
+                      <div className="cfg-summary-item-name">{a.name}</div>
+                    </div>
+                  </div>
+                  <div className="cfg-summary-item-price cfg-summary-addon-price">+${a.pricePerNight.toLocaleString()}/nuit</div>
+                </div>
+              );
+            })}
+            {selectedAddons.length === 0 && (
+              <div className="cfg-summary-empty">Aucun module supplémentaire sélectionné.</div>
+            )}
+          </div>
+
+          <div className="cfg-summary-totals">
+            <div className="cfg-summary-total-row">
+              <span>Tarif par nuit</span>
+              <span className="cfg-summary-total-val">${totalPerNight.toLocaleString()}</span>
+            </div>
+            <div className="cfg-summary-total-row">
+              <span>Nombre de nuits</span>
+              <span className="cfg-summary-total-val">× {nights}</span>
+            </div>
+            <div className="cfg-summary-total-row cfg-summary-grand">
+              <span>Total estimé</span>
+              <span className="cfg-summary-grand-val">${grandTotal.toLocaleString()}</span>
             </div>
           </div>
-        </motion.div>
-      );
-    }
-    
+
+          {status.msg && (
+            <div className={`cfg-status ${status.type === 'error' ? 'cfg-status-err' : status.type === 'success' ? 'cfg-status-ok' : 'cfg-status-load'}`}>
+              {status.msg}
+            </div>
+          )}
+
+          <button onClick={handleSubmit} disabled={status.type === 'loading' || status.type === 'success'} className="cfg-submit-btn">
+            CONFIRMER LA RÉSERVATION
+          </button>
+          <p className="cfg-legal">
+            En confirmant, vous envoyez cette demande à la direction du Diamond Casino & Resort. Une réponse vous sera apportée dans les plus brefs délais.
+          </p>
+        </div>
+      </motion.div>
+    );
+
     return null;
   };
 
   return (
     <AnimatePresence>
-      <motion.div 
-        initial={{ opacity: 0 }} 
-        animate={{ opacity: 1 }} 
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] bg-black flex flex-col overflow-hidden"
-      >
-         {/* Top Header Navigation */}
-         <div className="h-20 shrink-0 border-b border-white/10 bg-black/80 backdrop-blur-md flex items-center justify-between px-8 z-50">
-            <h1 className="font-oswald text-2xl uppercase tracking-[0.3em] font-black text-white flex items-center gap-4">
-              <img src="/Diamond 1.1.png" alt="Diamond" className="h-8 opacity-80" />
-              THE DIAMOND <span className="text-[#9300c4] hidden md:inline">| CONFIGURATEUR</span>
-            </h1>
-            
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="cfg-overlay">
+        {/* Sidebar */}
+        <div className="cfg-sidebar">
+          <div className="cfg-sidebar-head">
+            <div>
+              <h1 className="cfg-sidebar-title">THE DIAMOND</h1>
+              <p className="cfg-sidebar-sub">Configurateur Penthouse</p>
+            </div>
             {onClose && (
-              <button onClick={onClose} className="text-gray-400 hover:text-white hover:bg-white/10 transition-all p-3 rounded-full flex items-center gap-2 font-oswald tracking-widest text-sm uppercase">
-                <X className="w-5 h-5" /> <span className="hidden md:inline">FERMER</span>
-              </button>
+              <button onClick={onClose} className="cfg-close-btn"><X className="w-5 h-5" /></button>
             )}
-         </div>
+          </div>
 
-         {/* Steps Progress Bar */}
-         <div className="h-1 shrink-0 bg-white/5 flex">
-            {menuSteps.map((_, idx) => (
-              <div 
-                key={idx} 
-                className="h-full transition-all duration-500 ease-out"
-                style={{ 
-                  width: `${100 / menuSteps.length}%`, 
-                  backgroundColor: idx <= activeStep ? '#9300c4' : 'transparent',
-                  opacity: idx === activeStep ? 1 : 0.5
-                }}
-              />
+          <nav className="cfg-nav">
+            {STEPS.map((s, i) => (
+              <button key={s.id} onClick={() => goTo(i)} className={`cfg-nav-item ${step === i ? 'cfg-nav-active' : ''} ${step > i ? 'cfg-nav-done' : ''}`}>
+                <span className="cfg-nav-num">{String(i + 1).padStart(2, '0')}</span>
+                <span className="cfg-nav-label">{s.title}</span>
+                {step > i && <Check className="w-4 h-4 cfg-nav-check" />}
+              </button>
             ))}
-         </div>
+          </nav>
 
-         {/* Main View Area */}
-         <div className="flex-1 relative overflow-hidden bg-[#050505]">
-           <div className="absolute inset-0 flex">
-             <AnimatePresence mode="wait">
-               {renderStepContent()}
-             </AnimatePresence>
-           </div>
-         </div>
-         
-         {/* Footer Nav Controls */}
-         <div className="h-24 shrink-0 border-t border-white/10 bg-black/90 backdrop-blur-xl flex items-center justify-between px-6 md:px-12 z-50">
-            <button 
-              onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
-              disabled={activeStep === 0}
-              className="flex items-center gap-3 font-oswald uppercase tracking-widest text-base text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors py-3 px-6 rounded-lg hover:bg-white/5"
-            >
-              <ChevronLeft className="w-6 h-6" /> PRÉCÉDENT
+          <div className="cfg-sidebar-footer">
+            <div className="cfg-sidebar-price-label">TOTAL / NUIT</div>
+            <div className="cfg-sidebar-price">${totalPerNight.toLocaleString()}</div>
+            <div className="cfg-sidebar-nights">{nights} nuit{nights > 1 ? 's' : ''} · ${grandTotal.toLocaleString()} total</div>
+          </div>
+        </div>
+
+        {/* Main */}
+        <div className="cfg-main">
+          <div className="cfg-glow cfg-glow-1" />
+          <div className="cfg-glow cfg-glow-2" />
+
+          <div className="cfg-content">
+            <AnimatePresence mode="wait" custom={direction}>
+              {renderStep()}
+            </AnimatePresence>
+          </div>
+
+          {/* Footer */}
+          <div className="cfg-footer">
+            <button onClick={() => goTo(Math.max(0, step - 1))} disabled={step === 0} className="cfg-footer-btn cfg-footer-prev">
+              <ChevronLeft className="w-5 h-5" /> Précédent
             </button>
-            
-            <div className="hidden md:flex gap-4">
-              {menuSteps.map((step, i) => (
-                <button 
-                  key={i} 
-                  onClick={() => setActiveStep(i)}
-                  className={`font-oswald text-xs uppercase tracking-widest transition-all ${i === activeStep ? 'text-[#9300c4] scale-110 font-bold' : 'text-gray-600 hover:text-gray-300'}`}
-                >
-                  {i+1}. {step.title.split(' ')[0]}
-                </button>
+            <div className="cfg-dots">
+              {STEPS.map((_, i) => (
+                <button key={i} onClick={() => goTo(i)} className={`cfg-dot ${i === step ? 'cfg-dot-active' : ''}`} />
               ))}
             </div>
-
-            <button 
-              onClick={() => setActiveStep(Math.min(menuSteps.length - 1, activeStep + 1))}
-              disabled={activeStep === menuSteps.length - 1}
-              className="flex items-center gap-3 font-oswald uppercase tracking-widest text-base text-white bg-[#9300c4]/20 hover:bg-[#9300c4] border border-[#9300c4]/50 disabled:border-gray-800 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed transition-all py-3 px-8 rounded-lg shadow-[0_0_15px_rgba(147,0,196,0.2)] hover:shadow-[0_0_25px_rgba(147,0,196,0.6)]"
-            >
-              SUIVANT <ChevronRight className="w-6 h-6" />
+            <button onClick={() => goTo(Math.min(STEPS.length - 1, step + 1))} disabled={step === STEPS.length - 1} className="cfg-footer-btn cfg-footer-next">
+              Suivant <ChevronRight className="w-5 h-5" />
             </button>
-         </div>
+          </div>
+        </div>
       </motion.div>
     </AnimatePresence>
   );
