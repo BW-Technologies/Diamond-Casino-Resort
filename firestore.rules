@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Fonction utilitaire pour verifier si l'utilisateur est connecté
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Role helpers
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isPatron() {
+      return isSignedIn() && getUserRole() == 'patron';
+    }
+    
+    function isEmployeOrPatron() {
+      return isSignedIn() && (getUserRole() == 'employe' || getUserRole() == 'patron');
+    }
+
+    // --------------------------------------------------------
+    // RÈGLES DE SÉCURITÉ POUR CHAQUE COLLECTION
+    // --------------------------------------------------------
+
+    // Users (Utilisateurs)
+    match /users/{userId} {
+      // Tout utilisateur connecté peut voir les profils (nécessaire pour l'annuaire et le chat)
+      allow read: if isSignedIn();
+      // Création de son propre profil lors de l'inscription
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      // Mise à jour de son profil ou par un admin/employé
+      allow update: if isSignedIn() && (request.auth.uid == userId || isPatron() || isEmployeOrPatron());
+      // Suppression autorisée uniquement pour le patron (Dashboard)
+      allow delete: if isPatron();
+    }
+
+    // StoreItems (Boutique)
+    match /storeItems/{itemId} {
+      // Accessible en lecture pour tout le monde (visiteurs inclus)
+      allow read: if true;
+      // Modification / création / suppression uniquement par le Patron
+      allow write: if isPatron(); 
+    }
+
+    // Accounting (Comptabilité et Archives)
+    match /accounting/{transactionId} {
+      // Seuls les employés et le patron peuvent voir et modifier la compta
+      allow read, write: if isEmployeOrPatron();
+    }
+
+    // Settings (Paramètres, Tarifs, etc.)
+    match /settings/{settingId} {
+      // Tout le monde peut voir les tarifs publiquement
+      allow read: if true;
+      // SEUL le PATRON peut modifier les tarifs (Corrige l'erreur de sauvegarde des prix)
+      allow write: if isPatron();
+    }
+
+    // Chats (Messages de conciergerie)
+    match /chats/{chatId} {
+      // Le document de chat (statut, dernier message)
+      // Accessible par le client lui-même, l'employé ou le patron
+      allow read, write: if isSignedIn() && (request.auth.uid == chatId || isEmployeOrPatron());
+      
+      // Les messages contenus à l'intérieur
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn() && (request.auth.uid == chatId || isEmployeOrPatron());
+      }
+    }
+
+    // Penthouse Requests
+    match /penthouseRequests/{requestId} {
+      // Les clients VIP ou + peuvent lire leurs propres requetes ou en creer, Patron/Employe peuvent tout gerer
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isEmployeOrPatron());
+      allow create: if isSignedIn(); // Nous pourrions restreindre a VIP mais cote client c'est deja bloqué, autorisons la creation
+      allow update, delete: if isEmployeOrPatron();
+    }
+    
+    // Fallback de sécurité : Tout le reste est bloqué par défaut.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

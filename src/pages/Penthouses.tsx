@@ -4,9 +4,11 @@ import HeroSection from '../components/HeroSection';
 import SplitSection from '../components/SplitSection';
 import Modal from '../components/ui/Modal';
 import { getAssetUrl } from '../lib/utils';
+import PenthouseConfigurator from '../components/PenthouseConfigurator';
 
 export default function Penthouses() {
   const [activeFeature, setActiveFeature] = useState<{title: string; content: React.ReactNode; image: string} | null>(null);
+  const [isConfiguratorOpen, setIsConfiguratorOpen] = useState(false);
 
   const openFeatureModal = (feature: string) => {
     if (feature === 'spa') {
@@ -136,9 +138,12 @@ export default function Penthouses() {
           className="text-center mb-16"
         >
           <h2 className="font-oswald text-4xl md:text-5xl uppercase tracking-widest font-black">MODULES PERSONNALISABLES</h2>
-          <p className="text-gray-400 mt-4 font-sans max-w-3xl mx-auto font-light leading-relaxed">
+          <p className="text-gray-400 mt-4 font-sans max-w-3xl mx-auto font-light leading-relaxed mb-8">
             Faites de cet écrin exclusif une œuvre sur mesure. <strong>En tant que VIP Diamond</strong>, une équipe de techniciens et d'architectes d'intérieur de haut standing se tient prête 24 heures sur 24 pour réaménager entièrement le Penthouse et le mouler à vos moindres désirs.
           </p>
+          <button onClick={() => setIsConfiguratorOpen(true)} className="inline-block px-8 py-4 bg-[#9300c4] text-white font-oswald uppercase tracking-widest hover:bg-white hover:text-black transition-colors font-black">
+            CRÉER MA CONFIGURATION &rarr;
+          </button>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -170,6 +175,8 @@ export default function Penthouses() {
           ))}
         </div>
       </div>
+
+      <PenthouseConfigurator isOpen={isConfiguratorOpen} onClose={() => setIsConfiguratorOpen(false)} />
 
       <Modal 
         isOpen={activeFeature !== null}

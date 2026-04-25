@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { signOut, onAuthStateChanged, User, createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, orderBy, where, limit, writeBatch } from 'firebase/firestore';
 import { auth, db, secondaryAuth } from '../lib/firebase';
-import { Users, Shield, LogOut, Loader2, Star, UserPlus, Check, X, ShieldAlert, Settings, UserCircle, Car, Key, CreditCard, Edit2, Ban, DollarSign, Archive, Camera, ShoppingCart, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, Shield, LogOut, Loader2, Star, UserPlus, Check, X, ShieldAlert, Settings, UserCircle, Car, Key, CreditCard, Edit2, Ban, DollarSign, Archive, Camera, ShoppingCart, MessageSquare, ChevronDown, ChevronUp, Home } from 'lucide-react';
 import { getAssetUrl } from '../lib/utils';
 
 import OverviewTab from '../components/dashboard/OverviewTab';
@@ -15,12 +15,15 @@ import ArchivesTab from '../components/dashboard/ArchivesTab';
 import RatesTab from '../components/dashboard/RatesTab';
 import ProfileTab from '../components/dashboard/ProfileTab';
 import ChatTab from '../components/dashboard/ChatTab';
+import PenthouseRequestsTab from '../components/dashboard/PenthouseRequestsTab';
+import MyPenthouseReqTab from '../components/dashboard/MyPenthouseReqTab';
 import ConfirmModal from '../components/ui/ConfirmModal';
 
 interface UserData {
   uid: string;
   email: string;
   role: 'patron' | 'employe' | 'vip' | 'client' | 'banni';
+  isVip?: boolean;
   displayName: string;
   photoURL?: string;
   vipTier?: 'silver' | 'gold' | 'diamond';
@@ -78,13 +81,14 @@ export default function Dashboard() {
   const [editName, setEditName] = useState('');
   const [editRole, setEditRole] = useState<UserData['role']>('client');
   const [editVipTier, setEditVipTier] = useState<UserData['vipTier']>('silver');
+  const [editIsVip, setEditIsVip] = useState(false);
 
   // Profile Edit
   const [profilePhoto, setProfilePhoto] = useState('');
   const [profileSaveStatus, setProfileSaveStatus] = useState('');
 
   // Prices
-  const [prices, setPrices] = useState({ silver: "$500", gold: "$1,500,000", diamond: "Sur Invitation" });
+  const [prices, setPrices] = useState({ silver: "$500", gold: "$1,500,000", diamond: "Sur Invitation", penthouseNight: "$50,000" });
   const [savePriceStatus, setSavePriceStatus] = useState('');
 
   // Store Management
@@ -109,6 +113,9 @@ export default function Dashboard() {
 
   // Conciergerie fake state
   const [conciergeMsg, setConciergeMsg] = useState('');
+
+  // Penthouse Request tracking
+  const [hasPenthouseReq, setHasPenthouseReq] = useState(false);
 
   const navigate = useNavigate();
 
@@ -158,6 +165,14 @@ export default function Dashboard() {
             fetchTransactions();
             fetchStoreItems();
           }
+        } else {
+          // Check if non-staff has a penthouse request
+          import('firebase/firestore').then(({ query, collection, where, onSnapshot }) => {
+            const q = query(collection(db, 'penthouseRequests'), where('userId', '==', currentUser.uid));
+            onSnapshot(q, snap => {
+              setHasPenthouseReq(!snap.empty);
+            });
+          });
         }
 
       } catch (err) {
@@ -189,7 +204,12 @@ export default function Dashboard() {
       const pDoc = await getDoc(doc(db, 'settings', 'membership'));
       if(pDoc.exists()) {
         const d = pDoc.data();
-        setPrices({ silver: d.silver||"$500", gold: d.gold||"$1,500,000", diamond: d.diamond||"Sur Invitation" });
+        setPrices({ 
+          silver: d.silver||"$500", 
+          gold: d.gold||"$1,500,000", 
+          diamond: d.diamond||"Sur Invitation",
+          penthouseNight: d.penthouseNight||"$50,000"
+        });
       }
     } catch(err) {
       console.error(err);
@@ -205,7 +225,7 @@ export default function Dashboard() {
         allT.push({ id: d.id, ...d.data() } as Transaction);
       });
       setTransactions(allT.filter(t => !t.archived));
-      setArchives(allT);
+      setArchives(allT.filter(t => t.archived));
     } catch (err) {
       console.error("Error fetching transactions", err);
     }
@@ -298,6 +318,7 @@ export default function Dashboard() {
     setEditName(usr.displayName);
     setEditRole(usr.role);
     setEditVipTier(usr.vipTier || 'silver');
+    setEditIsVip(!!usr.isVip);
   };
 
   const saveEditUser = async () => {
@@ -305,15 +326,16 @@ export default function Dashboard() {
     try {
       const updateData: any = {
         displayName: editName,
-        role: editRole
+        role: editRole,
+        isVip: editIsVip
       };
-      if (editRole === 'vip') {
+      if (editRole === 'vip' || editIsVip) {
         updateData.vipTier = editVipTier;
       }
       await updateDoc(doc(db, 'users', editingUser.uid), updateData);
       // Update local patron data if editing oneself
       if (editingUser.uid === userData?.uid) {
-         setUserData(prev => prev ? {...prev, displayName: editName, role: editRole, vipTier: editRole === 'vip' ? editVipTier : prev.vipTier} : null);
+         setUserData(prev => prev ? {...prev, displayName: editName, role: editRole, isVip: editIsVip, vipTier: (editRole === 'vip' || editIsVip) ? editVipTier : prev.vipTier} : null);
       }
       setEditingUser(null);
       fetchUsersList();
@@ -510,6 +532,8 @@ export default function Dashboard() {
     { id: 'store', label: "GESTION BOUTIQUE", icon: ShoppingCart, show: userData.role === 'patron' },
     { id: 'accounting', label: "COMPTABILITÉ", icon: DollarSign, show: userData.role === 'patron' },
     { id: 'archives', label: "ARCHIVES", icon: Archive, show: userData.role === 'patron' },
+    { id: 'penthouseReq', label: "GESTION PENTHOUSES", icon: Home, show: userData.role === 'patron' || userData.role === 'employe' },
+    { id: 'myPenthouseReq', label: "DEMANDE PENTHOUSE", icon: Home, show: hasPenthouseReq },
     { id: 'rates', label: "TARIFS ET ADHÉSIONS", icon: Settings, show: userData.role === 'patron' },
     { id: 'profile', label: "MON PROFIL", icon: UserCircle, show: true }
   ].filter(t => t.show);
@@ -526,10 +550,10 @@ export default function Dashboard() {
   const archBenefice = archTotalCA - archTotalDep;
 
   return (
-    <div className="flex w-full bg-[#030303] h-screen overflow-hidden">
+    <div className="flex w-full bg-[#030303] h-[calc(100vh-5rem)] overflow-hidden">
       
       {/* Sidebar Navigation */}
-      <div className="w-72 bg-black border-r border-white/10 flex flex-col shrink-0 h-screen">
+      <div className="w-72 bg-black border-r border-white/10 flex flex-col shrink-0 h-full">
         <div className="px-8 pb-8 pt-8 border-b border-white/5 flex flex-col items-center text-center shrink-0">
            <img src={getAssetUrl("/Diamond 1.1.png")} className="w-24 mb-6 opacity-30 object-contain mx-auto" alt="Diamond logo" />
            <h2 className="text-xl font-oswald uppercase tracking-[0.2em] font-black text-white">{getPortalTitle()}</h2>
@@ -561,7 +585,7 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 h-screen overflow-y-auto w-full relative bg-[#030303] min-w-0 p-6 lg:p-12">
+      <div className="flex-1 h-full overflow-y-auto w-full relative bg-[#030303] min-w-0 p-6 lg:p-12">
         <AnimatePresence mode="wait">
           
           {activeTab === 'overview' && (
@@ -628,6 +652,14 @@ export default function Dashboard() {
             />
           )}
 
+          {activeTab === 'penthouseReq' && (userData.role === 'patron' || userData.role === 'employe') && (
+            <PenthouseRequestsTab userData={userData} />
+          )}
+
+          {activeTab === 'myPenthouseReq' && hasPenthouseReq && (
+            <MyPenthouseReqTab userId={userData.uid} />
+          )}
+
           {activeTab === 'rates' && userData.role === 'patron' && (
             <RatesTab 
               prices={prices} setPrices={setPrices}
@@ -682,7 +714,11 @@ export default function Dashboard() {
                    <option value="banni" className="text-red-500">Banni / Révoqué</option>
                  </select>
               </div>
-              {editRole === 'vip' && (
+              <label className="flex items-center gap-3 w-full bg-black border border-white/20 px-3 py-2 cursor-pointer mt-2">
+                <input type="checkbox" checked={editIsVip} onChange={e => setEditIsVip(e.target.checked)} className="w-4 h-4 accent-[#9300c4]" />
+                <span className="font-oswald text-gray-300 uppercase tracking-widest text-xs">A les privilèges VIP</span>
+              </label>
+              {(editRole === 'vip' || editIsVip) && (
                 <div>
                    <label className="block text-[10px] font-oswald text-gray-500 tracking-[0.2em] uppercase mb-1">Niveau VIP</label>
                    <select value={editVipTier} onChange={e => setEditVipTier(e.target.value as any)} className="w-full bg-black border border-white/20 text-white px-3 py-2 font-sans text-sm focus:border-white transition-colors appearance-none mt-1">

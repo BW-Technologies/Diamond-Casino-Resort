@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import HeroSection from '../components/HeroSection';
 import Modal from '../components/ui/Modal';
 import { getAssetUrl } from '../lib/utils';
@@ -14,11 +15,32 @@ interface StoreItem {
   desc: string;
 }
 
+interface UserData {
+  uid: string;
+  role: 'patron' | 'employe' | 'vip' | 'client' | 'banni';
+  isVip?: boolean;
+}
+
 export default function Store() {
   const [activeItem, setActiveItem] = useState<StoreItem | null>(null);
   const [storeItems, setStoreItems] = useState<StoreItem[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [purchaseStatus, setPurchaseStatus] = useState<string | null>(null);
 
   useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const uDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (uDoc.exists()) {
+          setUserData(uDoc.data() as UserData);
+        }
+      } else {
+        setUserData(null);
+      }
+    });
+
     const fetchStoreItems = async () => {
       try {
         const q = query(collection(db, 'storeItems'), orderBy('createdAt', 'desc'));
@@ -33,7 +55,60 @@ export default function Store() {
       }
     };
     fetchStoreItems();
+
+    return () => unsub();
   }, []);
+
+  const handlePurchase = async () => {
+    if (!user || !userData) {
+      setPurchaseStatus("Erreur : Vous devez être connecté pour effectuer un achat.");
+      setTimeout(() => setPurchaseStatus(null), 3000);
+      return;
+    }
+    if (userData.role !== 'vip' && userData.role !== 'patron' && !userData.isVip) {
+      setPurchaseStatus("Erreur : Seuls les membres VIP peuvent procéder à des achats.");
+      setTimeout(() => setPurchaseStatus(null), 3000);
+      return;
+    }
+    if (!activeItem) return;
+
+    try {
+      setPurchaseStatus("Traitement de la demande...");
+      const chatRef = doc(db, 'chats', user.uid);
+      const chatDoc = await getDoc(chatRef);
+      
+      const purchaseMessage = `Bonjour, je souhaite acquérir l'article "${activeItem.name}" au prix de ${activeItem.price}. Merci de préparer l'opération.`;
+      
+      if (!chatDoc.exists()) {
+         await setDoc(chatRef, {
+           lastMessageTime: Date.now(),
+           lastMessage: purchaseMessage,
+           unreadCount: 1,
+         });
+      } else {
+         await updateDoc(chatRef, {
+           lastMessageTime: Date.now(),
+           lastMessage: purchaseMessage,
+           unreadCount: (chatDoc.data().unreadCount || 0) + 1
+         });
+      }
+
+      await setDoc(doc(collection(db, `chats/${user.uid}/messages`)), {
+        text: purchaseMessage,
+        senderId: user.uid,
+        createdAt: Date.now(),
+      });
+
+      setPurchaseStatus("Votre demande a été envoyée à la conciergerie avec succès !");
+      setTimeout(() => {
+        setPurchaseStatus(null);
+        setActiveItem(null);
+      }, 3000);
+    } catch (err) {
+      console.error(err);
+      setPurchaseStatus("Une erreur est survenue lors de l'envoi de la demande.");
+    }
+  };
 
   return (
     <div className="flex flex-col w-full min-h-screen pb-24 bg-black">
@@ -106,9 +181,16 @@ export default function Store() {
               <p className="text-sm text-gray-500 uppercase tracking-widest mb-1">Prix de l'article</p>
               <p className="text-3xl font-oswald text-[#a72ad4]">{activeItem?.price}</p>
             </div>
-            <button className="px-8 py-4 bg-[#9300c4] text-white font-oswald uppercase tracking-widest font-bold hover:bg-white hover:text-black transition-colors">
-              ACHETER MAINTENANT
-            </button>
+            <div className="flex flex-col items-end gap-2">
+              <button onClick={handlePurchase} disabled={!!purchaseStatus && !purchaseStatus.includes('Erreur')} className="px-8 py-4 bg-[#9300c4] text-white font-oswald uppercase tracking-widest font-bold hover:bg-white hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                ACHETER MAINTENANT
+              </button>
+              {purchaseStatus && (
+                <p className={`text-sm font-sans ${purchaseStatus.includes('Erreur') ? 'text-red-400' : 'text-green-400'}`}>
+                  {purchaseStatus}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </Modal>

@@ -34,7 +34,7 @@ export default function ArchivesTab({
          <table className="w-full text-left border-collapse">
            <thead>
              <tr className="border-b border-white/10 bg-white/5">
-               <th className="p-4 font-oswald text-xs uppercase tracking-widest text-gray-400 font-normal">Date (Semaine clôturée)</th>
+               <th className="p-4 font-oswald text-xs uppercase tracking-widest text-gray-400 font-normal">Date Exacte</th>
                <th className="p-4 font-oswald text-xs uppercase tracking-widest text-gray-400 font-normal">Type</th>
                <th className="p-4 font-oswald text-xs uppercase tracking-widest text-gray-400 font-normal">Détails</th>
                <th className="p-4 font-oswald text-xs uppercase tracking-widest text-gray-400 font-normal">Montant</th>
@@ -44,9 +44,12 @@ export default function ArchivesTab({
              {archives.map((t: any) => (
                <React.Fragment key={t.id}>
                  <tr onClick={() => setExpandedTxId(expandedTxId === t.id ? null : t.id)} className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer group">
-                   <td className="p-4 font-sans text-gray-500 text-sm flex items-center gap-3">
+                   <td className="p-4 font-sans text-gray-400 text-xs flex items-center gap-3">
                      {expandedTxId === t.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4 group-hover:text-white" />}
-                     {new Date(t.createdAt).toLocaleDateString()}
+                     {t.createdAt ? new Date(t.createdAt).toLocaleString('fr-FR', {
+                       day: '2-digit', month: '2-digit', year: 'numeric',
+                       hour: '2-digit', minute: '2-digit'
+                     }) : 'N/A'}
                    </td>
                    <td className="p-4">
                      <span className={`px-2 py-1 text-[10px] font-oswald tracking-widest uppercase border ${

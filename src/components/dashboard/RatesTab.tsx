@@ -23,6 +23,10 @@ export default function RatesTab({
               <label className="block font-oswald text-fuchsia-500 tracking-widest uppercase mb-2">Statut Diamond (Sur Invitation)</label>
               <input type="text" value={prices.diamond} onChange={e=>setPrices({...prices, diamond: e.target.value})} className="w-full bg-black border border-fuchsia-500/50 text-fuchsia-500 px-4 py-3 font-sans focus:outline-none focus:border-fuchsia-500 transition-colors" />
             </div>
+            <div>
+              <label className="block font-oswald text-[#9300c4] tracking-widest uppercase mb-2">Prix par nuit (Penthouse Base)</label>
+              <input type="text" value={prices.penthouseNight} onChange={e=>setPrices({...prices, penthouseNight: e.target.value})} className="w-full bg-black border border-[#9300c4]/50 text-[#9300c4] px-4 py-3 font-sans focus:outline-none focus:border-[#9300c4] transition-colors" />
+            </div>
             
             <button onClick={handleSavePrices} className="mt-8 border border-white bg-white text-black font-oswald uppercase tracking-widest px-8 py-3 hover:bg-black hover:text-white transition-all duration-300">
                SAUVEGARDER LES TARIFS

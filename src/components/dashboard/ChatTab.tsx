@@ -174,6 +174,18 @@ export default function ChatTab({ userData, usersList, requestConfirm }: any) {
     });
   };
 
+  const handleDeleteChat = () => {
+    if (!selectedChat) return;
+    requestConfirm("ATTENTION: Voulez-vous vraiment supprimer la conversation entière avec ce client ?", async () => {
+      try {
+        await deleteDoc(doc(db, 'chats', selectedChat.id));
+        setSelectedChat(null);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  };
+
   const getUserName = (uid: string) => {
     if (uid === userData.uid) return userData.displayName;
     const u = usersList.find((u:any) => u.uid === uid);
@@ -273,6 +285,11 @@ export default function ChatTab({ userData, usersList, requestConfirm }: any) {
                      <p className="font-sans text-xs text-gray-500">Service disponible 24/7 pour les membres Diamond</p>
                    </div>
                  </div>
+                 {userData.role === 'patron' && (
+                   <button onClick={handleDeleteChat} className="p-2 border border-red-500/20 text-red-500 hover:bg-red-500/10 transition-colors" title="Supprimer la conversation" >
+                     <Trash2 className="w-5 h-5" />
+                   </button>
+                 )}
                </div>
                
                <div className="flex-1 overflow-y-auto p-6 space-y-6">

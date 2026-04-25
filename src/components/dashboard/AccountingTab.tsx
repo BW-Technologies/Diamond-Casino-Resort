@@ -52,6 +52,7 @@ export default function AccountingTab({
                <thead>
                  <tr className="border-b border-white/10 bg-white/5">
                    <th className="p-4 font-oswald text-xs uppercase tracking-widest text-gray-400 font-normal">Type</th>
+                   <th className="p-4 font-oswald text-xs uppercase tracking-widest text-gray-400 font-normal">Date</th>
                    <th className="p-4 font-oswald text-xs uppercase tracking-widest text-gray-400 font-normal">Détails</th>
                    <th className="p-4 font-oswald text-xs uppercase tracking-widest text-gray-400 font-normal">Montant</th>
                    <th className="p-4 font-oswald text-xs uppercase tracking-widest text-gray-400 font-normal text-right">Actions</th>
@@ -67,6 +68,12 @@ export default function AccountingTab({
                          }`}>
                            {t.type}
                          </span>
+                       </td>
+                       <td className="p-4 text-gray-400 font-sans text-xs">
+                         {t.createdAt ? new Date(t.createdAt).toLocaleString('fr-FR', {
+                           day: '2-digit', month: '2-digit', year: 'numeric',
+                           hour: '2-digit', minute: '2-digit'
+                         }) : 'N/A'}
                        </td>
                        <td className="p-4">
                          <p className="font-sans text-gray-200">{t.nature}</p>
