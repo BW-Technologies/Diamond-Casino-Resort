@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import HeroSection from '../components/HeroSection';
 import SplitSection from '../components/SplitSection';
 import Modal from '../components/ui/Modal';
@@ -9,101 +11,100 @@ import PenthouseConfigurator from '../components/PenthouseConfigurator';
 export default function Penthouses() {
   const [activeFeature, setActiveFeature] = useState<{title: string; content: React.ReactNode; image: string} | null>(null);
   const [isConfiguratorOpen, setIsConfiguratorOpen] = useState(false);
+  const [conciergePrices, setConciergePrices] = useState<any>({});
+
+  useEffect(() => {
+    getDoc(doc(db, 'settings', 'membership')).then(snap => {
+      if(snap.exists()) setConciergePrices(snap.data());
+    }).catch(console.error);
+  }, []);
 
   const openFeatureModal = (feature: string) => {
     if (feature === 'spa') {
       setActiveFeature({
         title: "LE SPA PRIVÉ",
-        image: getAssetUrl("/penthouse-spa.png"),
+        image: "https://static.wikia.nocookie.net/gtawiki/images/c/c8/MasterPenthouse-GTAO-Options-Spa.png/revision/latest/scale-to-width-down/1000?cb=20210110105715",
         content: (
           <>
             <p>Pourquoi descendre au rez-de-chaussée quand vous pouvez avoir votre propre sanctuaire thermique ? L'option Spa ajoute un jacuzzi luxueux avec vue sur la ville, un sauna en bois de cèdre et un service de massage à la demande.</p>
             <p>Détendez-vous après une longue nuit aux tables de jeu ou préparez-vous pour une journée intense à Vinewood avec les meilleurs thérapeutes de Los Santos.</p>
-            <p className="text-[#9300c4] text-sm font-semibold mt-4">+$15,000 / nuit</p>
           </>
         )
       });
     } else if (feature === 'office') {
       setActiveFeature({
         title: "LE BUREAU DE DIRECTION",
-        image: getAssetUrl("/penthouse-office.png"),
+        image: "https://static.wikia.nocookie.net/gtawiki/images/a/a7/MasterPenthouse-GTAO-Options-Office.png/revision/latest/scale-to-width-down/1000?cb=20210110105902",
         content: (
           <>
             <p>Gérez votre empire directement depuis votre Penthouse. Le Bureau de Direction vous donne un accès exclusif au réseau de SecuroServ sans avoir à quitter le confort de l'hôtel.</p>
             <p>Il comprend également un coffre-fort mural dissimulé et une armurerie privée avec espace de modification pour vos équipements les plus précieux.</p>
-            <p className="text-[#9300c4] text-sm font-semibold mt-4">+$8,000 / nuit</p>
           </>
         )
       });
     } else if (feature === 'arcade') {
       setActiveFeature({
-        title: "ESPACE LOUNGE & ARCADE",
-        image: getAssetUrl("/penthouse-lounge.png"),
+        title: "ESPACE ARCADE & LOUNGE",
+        image: "https://static.wikia.nocookie.net/gtawiki/images/f/f4/MasterPenthouse-GTAO-Options-LoungeArea.png/revision/latest/scale-to-width-down/1000?cb=20210110105627",
         content: (
           <>
             <p>Apportez le divertissement à la maison. Installez jusqu'à trois bornes d'arcade classiques, un bar complet géré par une équipe disponible H24, et un espace de vie conçu pour les fins de soirée les plus mémorables.</p>
             <p>Personnalisez les couleurs fluo, le mobilier et choisissez vos œuvres d'art pour impressionner vos invités.</p>
-            <p className="text-[#9300c4] text-sm font-semibold mt-4">+$10,000 / nuit</p>
           </>
         )
       });
     } else if (feature === 'croupier') {
       setActiveFeature({
         title: "CROUPIER PRIVÉ",
-        image: getAssetUrl("/penthouse-dealer.png"),
+        image: "https://static.wikia.nocookie.net/gtawiki/images/1/1e/MasterPenthouse-GTAO-Options-PrivateDealer.png/revision/latest/scale-to-width-down/1000?cb=20210110105845",
         content: (
           <>
             <p>Le frisson du casino sans quitter l'intimité de votre salon. Une table de jeu haute limite est installée directement dans votre espace.</p>
             <p>Un croupier professionnel du Diamond Casino est à votre disposition 24h/24 pour organiser des parties de Blackjack ou de Poker avec vos amis ou associés, loin des regards indiscrets.</p>
-            <p className="text-[#9300c4] text-sm font-semibold mt-4">+$12,000 / nuit</p>
           </>
         )
       });
     } else if (feature === 'media') {
       setActiveFeature({
         title: "SALLE DE MÉDIAS (CINÉMA PRIVÉ)",
-        image: getAssetUrl("/penthouse-media.png"),
+        image: "https://static.wikia.nocookie.net/gtawiki/images/0/0a/MasterPenthouse-GTAO-Options-MediaRoom.png/revision/latest/scale-to-width-down/1000?cb=20210110105647",
         content: (
           <>
             <p>Profitez d'un authentique cinéma de Vinewood. Cette salle dédiée est équipée d'un écran géant incurvé et d'un système de sonorisation immersif THX.</p>
             <p>Idéal pour vos présentations de projets confidentiels, visionner les dernières avant-premières de Richards Majestic ou simplement profiter de soirées privées grandioses.</p>
-            <p className="text-[#9300c4] text-sm font-semibold mt-4">+$7,500 / nuit</p>
           </>
         )
       });
     } else if (feature === 'guest') {
       setActiveFeature({
         title: "SUITE D'INVITÉS",
-        image: getAssetUrl("/penthouse-guest.png"),
+        image: "https://static.wikia.nocookie.net/gtawiki/images/3/3f/MasterPenthouse-GTAO-Options-ExtraBedroom.png/revision/latest/scale-to-width-down/1000?cb=20210110105920",
         content: (
           <>
             <p>L'hospitalité portée à l'art. Une chambre luxueuse séparée dotée de sa propre salle de bain en marbre et d'une vue sur Los Santos.</p>
             <p>Parfaite pour accueillir vos partenaires d'affaires d'outre-mer, vos relations diplomatiques ou tout invité méritant les standards du Diamond.</p>
-            <p className="text-[#9300c4] text-sm font-semibold mt-4">+$9,000 / nuit</p>
           </>
         )
       });
     } else if (feature === 'garage') {
       setActiveFeature({
         title: "GARAGE PRIVÉ & VOITURIER",
-        image: getAssetUrl("/penthouse-garage.png"),
+        image: "https://static.wikia.nocookie.net/gtawiki/images/9/96/MasterPenthouse-GTAO-Options-Garage.png/revision/latest/scale-to-width-down/1000?cb=20210110105936",
         content: (
           <>
-            <p>Un accès direct à un parking souterrain sécurisé offrant 10 luxueuses places. Votre passion pour l'automobile est votre signature.</p>
+            <p>Un accès direct à un parking souterrain sécurisé offrant 10 luxueuses places. Intérêt RP : Votre passion pour l'automobile est votre signature.</p>
             <p>Ce garage est l'écrin nécessaire pour vos véhicules exclusifs. Le service voiturier vous les préparera à l'extérieur, mais rappelez-vous : tout en respectant strictement le Code de la route de San Andreas une fois sorti de l'enceinte.</p>
-            <p className="text-[#9300c4] text-sm font-semibold mt-4">+$5,000 / nuit</p>
           </>
         )
       });
-    } else if (feature === 'bedroom') {
+    } else if (feature === 'meeting') {
       setActiveFeature({
-        title: "SUITE DE MAÎTRE",
-        image: getAssetUrl("/penthouse-master-bedroom.png"),
+        title: "SALLE DE RÉUNIONS",
+        image: "https://static.wikia.nocookie.net/gtawiki/images/6/6b/MasterPenthouse-GTAO-DiningRoom.png/revision/latest/scale-to-width-down/1000?cb=20191102115559",
         content: (
           <>
-            <p>Le cœur du Penthouse. Une chambre de maître avec lit king-size en draps de soie, dressing walk-in et salle de bain en marbre. La vue panoramique sur Los Santos est incluse.</p>
-            <p>Chaque détail a été pensé pour un confort absolu — de l'éclairage d'ambiance programmable au système audio encastré dans les murs.</p>
-            <p className="text-[#9300c4] text-sm font-semibold mt-4">Inclus avec le Penthouse de base</p>
+            <p>Gérez vos affaires avec clarté et efficacité. Une table en acajou encadrée de chaises en cuir attend vos collaborateurs pour vos prises de décision les plus stratégiques.</p>
+            <p>Entièrement insonorisée pour garantir la confidentialité absolue de vos projets, cette salle est l'extension logique de l'empire que vous avez bâti.</p>
           </>
         )
       });
@@ -138,7 +139,7 @@ export default function Penthouses() {
         />
       </div>
 
-      <div className="w-full max-w-7xl mx-auto px-8 py-20 mb-24 border-t border-white/5">
+      <div className="w-full max-w-7xl mx-auto px-8 py-20 border-t border-white/5 mb-16">
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -147,7 +148,7 @@ export default function Penthouses() {
         >
           <h2 className="font-oswald text-4xl md:text-5xl uppercase tracking-widest font-black">MODULES PERSONNALISABLES</h2>
           <p className="text-gray-400 mt-4 font-sans max-w-3xl mx-auto font-light leading-relaxed mb-8">
-            Faites de cet écrin exclusif une œuvre sur mesure. <strong>En tant que VIP Diamond</strong>, une équipe de techniciens et d'architectes d'intérieur de haut standing se tient prête 24 heures sur 24 pour réaménager entièrement le Penthouse et le mouler à vos moindres désirs. Tous les prix sont affichés par nuit.
+            Faites de cet écrin exclusif une œuvre sur mesure. <strong>En tant que VIP Diamond</strong>, une équipe de techniciens et d'architectes d'intérieur de haut standing se tient prête 24 heures sur 24 pour réaménager entièrement le Penthouse et le mouler à vos moindres désirs.
           </p>
           <button onClick={() => setIsConfiguratorOpen(true)} className="inline-block px-8 py-4 bg-[#9300c4] text-white font-oswald uppercase tracking-widest hover:bg-white hover:text-black transition-colors font-black">
             CRÉER MA CONFIGURATION &rarr;
@@ -156,23 +157,23 @@ export default function Penthouses() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {[
-            { id: 'bedroom', name: 'SUITE DE MAÎTRE', img: '/penthouse-master-bedroom.png' },
-            { id: 'spa', name: 'SPA THERMAL', img: '/penthouse-spa.png' },
-            { id: 'office', name: 'BUREAU SÉCURISÉ', img: '/penthouse-office.png' },
-            { id: 'arcade', name: 'LOUNGE & ARCADE', img: '/penthouse-lounge.png' },
-            { id: 'croupier', name: 'CROUPIER PRIVÉ', img: '/penthouse-dealer.png' },
-            { id: 'media', name: 'SALLE DE MÉDIAS', img: '/penthouse-media.png' },
-            { id: 'guest', name: 'SUITE D\'INVITÉS', img: '/penthouse-guest.png' },
-            { id: 'garage', name: 'GARAGE & VOITURIER', img: '/penthouse-garage.png' },
+            { id: 'spa', name: 'SPA THERMAL', img: 'https://static.wikia.nocookie.net/gtawiki/images/c/c8/MasterPenthouse-GTAO-Options-Spa.png/revision/latest/scale-to-width-down/1000?cb=20210110105715' },
+            { id: 'office', name: 'BUREAU SÉCURISÉ', img: 'https://static.wikia.nocookie.net/gtawiki/images/a/a7/MasterPenthouse-GTAO-Options-Office.png/revision/latest/scale-to-width-down/1000?cb=20210110105902' },
+            { id: 'arcade', name: 'LOUNGE ARCADE', img: 'https://static.wikia.nocookie.net/gtawiki/images/e/eb/MasterPenthouse-GTAO-Options-BarandPartyHub.png/revision/latest/scale-to-width-down/1000?cb=20210110105827' },
+            { id: 'croupier', name: 'CROUPIER PRIVÉ', img: 'https://static.wikia.nocookie.net/gtawiki/images/1/1e/MasterPenthouse-GTAO-Options-PrivateDealer.png/revision/latest/scale-to-width-down/1000?cb=20210110105845' },
+            { id: 'media', name: 'SALLE DE MÉDIAS', img: 'https://static.wikia.nocookie.net/gtawiki/images/0/0a/MasterPenthouse-GTAO-Options-MediaRoom.png/revision/latest/scale-to-width-down/1000?cb=20210110105647' },
+            { id: 'guest', name: 'SUITE D\'INVITÉS', img: 'https://static.wikia.nocookie.net/gtawiki/images/3/3f/MasterPenthouse-GTAO-Options-ExtraBedroom.png/revision/latest/scale-to-width-down/1000?cb=20210110105920' },
+            { id: 'garage', name: 'GARAGE & VOITURIER', img: 'https://static.wikia.nocookie.net/gtawiki/images/9/96/MasterPenthouse-GTAO-Options-Garage.png/revision/latest/scale-to-width-down/1000?cb=20210110105936' },
+            { id: 'meeting', name: 'SALLE DE RÉUNIONS', img: 'https://static.wikia.nocookie.net/gtawiki/images/6/6b/MasterPenthouse-GTAO-DiningRoom.png/revision/latest/scale-to-width-down/1000?cb=20191102115559' }
           ].map((feature, i) => (
             <motion.div 
               key={feature.id}
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: i * 0.15 }}
               onClick={() => openFeatureModal(feature.id)}
-              className="relative aspect-square bg-[#111] overflow-hidden group cursor-pointer border border-white/5 rounded-lg"
+              className="relative aspect-square bg-[#111] overflow-hidden group cursor-pointer border border-white/5"
             >
               <img src={getAssetUrl(feature.img)} alt={feature.name} className="w-full h-full object-cover opacity-50 group-hover:opacity-80 group-hover:scale-105 transition-all duration-700" />
               <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-black via-black/80 to-transparent translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
@@ -182,6 +183,47 @@ export default function Penthouses() {
             </motion.div>
           ))}
         </div>
+      </div>
+
+      <div className="w-full max-w-7xl mx-auto px-8 py-20 border-t border-white/5 mb-24 bg-[#0a0a0a]">
+         <motion.div 
+           initial={{ opacity: 0, y: 30 }}
+           whileInView={{ opacity: 1, y: 0 }}
+           viewport={{ once: true }}
+           className="text-center mb-16"
+         >
+           <h2 className="font-oswald text-4xl md:text-5xl uppercase tracking-widest font-black text-[#9300c4]">SERVICES DE CONCIERGERIE</h2>
+           <p className="text-gray-400 mt-4 font-sans max-w-3xl mx-auto font-light leading-relaxed mb-4">
+             Votre location inclut l'accès direct par téléphone à nos services exclusifs 24h/24. <strong>Uniquement réservé aux membres VIP Diamond.</strong>
+           </p>
+         </motion.div>
+
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+           {[
+             { name: "Fête Privée (Members Party)", id: "conciergeParty", defaultPrice: "$20,000", desc: "Installation complète du bar avec boissons premiums et traiteur pour vos invités, selon une liste d'accès approuvée par vos soins et gérée par la sécurité." },
+             { name: "Service de Voiturier", id: "conciergeValet", defaultPrice: "$50", desc: "Demandez à notre voiturier de préparer et de vous amener l'un de vos véhicules depuis votre Garage Privé directement à l'entrée." },
+             { name: "Service Champagne", id: "conciergeChampagne", defaultPrice: "$1,000", desc: "Commandez une bouteille de notre meilleur Champagne millésimé, servie à la bonne température, directement dans votre Suite." },
+             { name: "Service de Nettoyage", id: "conciergeCleaning", defaultPrice: "$500", desc: "Faites appel à notre personnel d'entretien pour remettre votre Penthouse dans un état impeccable à tout moment du jour ou de la nuit." },
+             { name: "Service Limousine", id: "conciergeLimo", defaultPrice: "À partir de $200", desc: "Voyagez avec classe, discrétion et confort vers la destination de votre choix aux commandes d'un de nos chauffeurs privés." },
+             { name: "Concierge Aéronautique", id: "conciergeHeli", defaultPrice: "À partir de $1,000", desc: "Besoin de survoler la ville ? Réservez rapidement un transfert en hélicoptère depuis l'héliport privé sur le toit du Casino." }
+           ].map((srv) => (
+             <motion.div 
+               key={srv.id}
+               initial={{ opacity: 0, y: 20 }}
+               whileInView={{ opacity: 1, y: 0 }}
+               viewport={{ once: true }}
+               className="bg-[#111] border border-white/5 p-8 flex flex-col justify-between"
+             >
+               <div>
+                  <h3 className="font-oswald text-xl uppercase tracking-widest text-white mb-4">{srv.name}</h3>
+                  <p className="font-sans text-sm text-gray-400 leading-relaxed">{srv.desc}</p>
+               </div>
+               <div className="mt-6 pt-4 border-t border-white/5">
+                 <span className="font-mono text-[#9300c4] text-sm">Tarif : {conciergePrices[srv.id] || srv.defaultPrice}</span>
+               </div>
+             </motion.div>
+           ))}
+         </div>
       </div>
 
       <PenthouseConfigurator isOpen={isConfiguratorOpen} onClose={() => setIsConfiguratorOpen(false)} />

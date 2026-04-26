@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, MessageSquare } from 'lucide-react';
 import { getAssetUrl } from '../lib/utils';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc, collection, query, onSnapshot } from 'firebase/firestore';
 
 const navLinks = [
   { path: '/', label: 'ACCUEIL' },
@@ -20,12 +21,45 @@ export default function Navbar() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    let chatUnsub: () => void;
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const isStaff = userData.role === 'patron' || userData.role === 'employe';
+
+            if (isStaff) {
+              const qChats = query(collection(db, 'chats'));
+              chatUnsub = onSnapshot(qChats, snap => {
+                let count = 0;
+                snap.forEach(d => { count += (d.data().unreadCount || 0); });
+                setUnreadCount(count);
+              });
+            } else {
+              chatUnsub = onSnapshot(doc(db, 'chats', currentUser.uid), snap => {
+                if (snap.exists()) {
+                  setUnreadCount(snap.data().unreadCount || 0);
+                }
+              });
+            }
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      } else {
+        if (chatUnsub) chatUnsub();
+      }
     });
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (chatUnsub) chatUnsub();
+    };
   }, []);
 
   const containerVariants = {
@@ -99,6 +133,14 @@ export default function Navbar() {
         transition={{ delay: 0.8, duration: 0.5 }}
         className="hidden lg:flex items-center gap-4 flex-shrink-0"
       >
+         {unreadCount > 0 && (
+            <Link to="/dashboard#chat" className="relative text-white hover:text-[#9300c4] transition-colors p-2 flex items-center justify-center">
+              <MessageSquare className="w-5 h-5" />
+              <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[9px] font-bold">
+                {unreadCount}
+              </span>
+            </Link>
+         )}
          <Link to={user ? "/dashboard" : "/login"} className="px-6 py-2.5 border border-white/20 text-xs font-oswald tracking-widest hover:bg-white hover:text-black transition-all duration-500 cursor-pointer uppercase font-bold group shadow-[0_0_15px_rgba(255,255,255,0.05)] hover:shadow-[0_0_25px_rgba(255,255,255,0.8)] whitespace-nowrap block">
            {user ? "MON PORTAIL" : "SE CONNECTER"}
          </Link>

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { motion, AnimatePresence } from 'motion/react';
+import { collection, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { getAssetUrl } from '../../lib/utils';
-import { Home, Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Home, Calendar, Plus, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 
 export default function MyPenthouseReqTab({ userId }: { userId: string }) {
   const [requests, setRequests] = useState<any[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'penthouseRequests'), where('userId', '==', userId));
@@ -19,144 +19,154 @@ export default function MyPenthouseReqTab({ userId }: { userId: string }) {
     return () => unsub();
   }, [userId]);
 
+  const deleteRequest = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (window.confirm("Voulez-vous vraiment annuler et supprimer cette réservation ?")) {
+      try {
+        await deleteDoc(doc(db, 'penthouseRequests', id));
+      } catch (err) {
+        console.error(err);
+        alert("Erreur lors de l'annulation de la réservation.");
+      }
+    }
+  };
+
   if (requests.length === 0) return null;
-
-  const statusIcons: Record<string, React.ReactNode> = {
-    pending: <Clock className="w-5 h-5 text-amber-400" />,
-    approved: <CheckCircle className="w-5 h-5 text-emerald-400" />,
-    rejected: <XCircle className="w-5 h-5 text-red-400" />,
-  };
-
-  const statusLabels: Record<string, string> = {
-    pending: "En Cours d'Analyse",
-    approved: "Réservation Validée",
-    rejected: "Demande Refusée",
-  };
-
-  const statusColors: Record<string, string> = {
-    pending: 'border-amber-500/20 bg-amber-500/5',
-    approved: 'border-emerald-500/20 bg-emerald-500/5',
-    rejected: 'border-red-500/20 bg-red-500/5',
-  };
 
   return (
     <motion.div key="my-penthouse-req" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-          <Home className="w-5 h-5 text-amber-400" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-oswald uppercase tracking-widest font-black text-white">Ma Demande Penthouse</h2>
-          <p className="text-xs font-sans text-gray-500 mt-0.5">Suivez l'état de votre réservation</p>
-        </div>
-      </div>
+       <h2 className="text-3xl font-oswald uppercase tracking-widest font-black text-white mb-8 border-l-4 border-[#9300c4] pl-4">MES RÉSERVATIONS PENTHOUSE</h2>
+       
+       <div className="grid grid-cols-1 gap-6">
+         {requests.map((req) => {
+           const conf = req.configuration;
+           const isExpanded = expandedId === req.id;
+           
+           return (
+             <div key={req.id} className="border border-white/10 bg-[#0a0a0a] relative overflow-hidden flex flex-col rounded shadow-xl">
+               
+               {/* Header Summary */}
+               <div 
+                 className="p-6 flex flex-col md:flex-row gap-6 items-start md:items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
+                 onClick={() => setExpandedId(isExpanded ? null : req.id)}
+               >
+                 <div className="flex-1">
+                   <div className="flex items-center gap-4 mb-2">
+                     <Home className="w-5 h-5 text-[#9300c4]" />
+                     <h3 className="font-oswald text-xl text-white uppercase tracking-wider">Penthouse de Maître</h3>
+                     <span className={`px-2 py-0.5 text-xs font-oswald tracking-widest uppercase border rounded ${
+                       req.status === 'pending' ? 'border-amber-500 text-amber-500 bg-amber-500/10' :
+                       req.status === 'approved' ? 'border-green-500 text-green-500 bg-green-500/10' :
+                       'border-red-500 text-red-500 bg-red-500/10'
+                     }`}>
+                       {req.status === 'pending' ? 'En Cours d\'Analyse' : req.status === 'approved' ? 'Validation Accordée' : 'Demande Refusée'}
+                     </span>
+                   </div>
+                   
+                   <div className="flex items-center gap-4 text-sm font-sans text-gray-400 mt-3">
+                     <div className="flex items-center gap-1.5 bg-black px-3 py-1.5 rounded border border-white/5">
+                       <Calendar className="w-4 h-4 text-[#9300c4]" />
+                       <span>{new Date(conf.startDate).toLocaleDateString('fr-FR')} - {new Date(conf.endDate).toLocaleDateString('fr-FR')} ({conf.totalNights} nuit{conf.totalNights > 1 && 's'})</span>
+                     </div>
+                   </div>
+                 </div>
+                 
+                 <div className="flex items-center gap-6 w-full md:w-auto">
+                   <div className="text-left md:text-right flex-1 md:flex-none">
+                     <p className="font-oswald text-gray-500 text-xs tracking-widest uppercase mb-1">Total Séjour</p>
+                     <p className="font-oswald text-2xl text-white tracking-wider">${(conf.totalPrice || conf.nightlyPrice * conf.totalNights).toLocaleString()}</p>
+                   </div>
+                   <button className="text-gray-400 hover:text-white transition-colors bg-white/5 p-2 rounded-full border border-white/5">
+                     {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                   </button>
+                 </div>
+               </div>
 
-      <div className="flex flex-col gap-5">
-        {requests.map((req) => {
-          const config = req.configuration;
-          const checkIn = config?.checkIn ? new Date(config.checkIn).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : null;
-          const checkOut = config?.checkOut ? new Date(config.checkOut).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : null;
-
-          return (
-            <div key={req.id} className={`border rounded-xl overflow-hidden ${statusColors[req.status] || statusColors.pending}`}>
-              {/* Status banner */}
-              <div className="flex items-center gap-3 px-5 py-3 border-b border-white/5">
-                {statusIcons[req.status]}
-                <span className="font-oswald text-sm text-white uppercase tracking-widest">{statusLabels[req.status]}</span>
-                <span className="text-xs text-gray-500 font-sans ml-auto">
-                  {new Date(req.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-
-              <div className="p-5">
-                {/* Images of selected options */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-5">
-                  {config?.style?.image && (
-                    <div className="relative rounded-lg overflow-hidden border border-white/6">
-                      <img src={getAssetUrl(config.style.image)} alt={config.style.name} className="w-full aspect-video object-cover" />
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                        <div className="text-[10px] font-oswald uppercase tracking-wider text-[#9300c4]">Style</div>
-                        <div className="text-xs font-oswald text-white uppercase">{config.style.name}</div>
-                      </div>
-                    </div>
-                  )}
-                  {config?.addons?.map((a: any, i: number) => a && (
-                    <div key={i} className="relative rounded-lg overflow-hidden border border-white/6">
-                      <img src={getAssetUrl(a.image)} alt={a.name} className="w-full aspect-video object-cover" />
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                        <div className="text-[10px] font-oswald uppercase tracking-wider text-amber-400">Option</div>
-                        <div className="text-xs font-oswald text-white uppercase truncate">{a.name}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Info grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="bg-black/20 rounded-lg p-4 border border-white/5">
-                    <div className="font-oswald text-gray-500 text-[10px] tracking-widest uppercase mb-2">Style Sélectionné</div>
-                    <div className="font-sans text-sm text-gray-200">{config?.style?.name || '—'}</div>
-                  </div>
-                  <div className="bg-black/20 rounded-lg p-4 border border-white/5">
-                    <div className="font-oswald text-gray-500 text-[10px] tracking-widest uppercase mb-2">Modules Optionnels</div>
-                    {config?.addons?.length > 0 ? (
-                      <ul className="space-y-1">
-                        {config.addons.map((a: any, i: number) => a && (
-                          <li key={i} className="font-sans text-sm text-gray-300">• {a.name}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="font-sans text-sm text-gray-500">Aucun</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Dates & total */}
-                {checkIn && checkOut && (
-                  <div className="bg-black/20 rounded-lg p-4 border border-white/5 flex items-center gap-4 mb-4">
-                    <Calendar className="w-5 h-5 text-[#9300c4] shrink-0" />
-                    <div className="flex-1">
-                      <div className="font-oswald text-gray-500 text-[10px] tracking-widest uppercase mb-1">Séjour</div>
-                      <div className="font-sans text-sm text-white">{checkIn} → {checkOut} ({config?.nights || '—'} nuit{(config?.nights || 0) > 1 ? 's' : ''})</div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="bg-black/30 rounded-lg p-5 border border-[#9300c4]/15">
-                  <div className="flex justify-between items-end">
-                    <div>
-                      {config?.totalPerNight && (
-                        <div className="font-sans text-xs text-gray-400 mb-1">${config.totalPerNight.toLocaleString()}/nuit × {config?.nights || 1} nuits</div>
-                      )}
-                      <div className="font-oswald text-gray-500 text-[10px] tracking-widest uppercase">Total Estimé</div>
-                    </div>
-                    <div className="font-oswald text-3xl text-white tracking-wider">${(config?.totalPrice || 0).toLocaleString()}</div>
-                  </div>
-                </div>
-
-                {/* Status message */}
-                <div className="mt-4">
-                  {req.status === 'pending' && (
-                    <p className="text-xs font-sans text-amber-500/70 leading-relaxed">
-                      Un membre de la direction finalise l'étude de votre dossier. Une réponse vous sera apportée sous peu.
-                    </p>
-                  )}
-                  {req.status === 'approved' && (
-                    <p className="text-xs font-sans text-emerald-400/70 leading-relaxed">
-                      Félicitations ! Votre réservation est validée. Coordonnez votre aménagement avec la conciergerie.
-                    </p>
-                  )}
-                  {req.status === 'rejected' && (
-                    <p className="text-xs font-sans text-red-500/70 leading-relaxed">
-                      Votre demande a été déclinée. Contactez la direction pour plus d'informations.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+               {/* Expanded Details */}
+               <AnimatePresence>
+                 {isExpanded && (
+                   <motion.div
+                     initial={{ height: 0, opacity: 0 }}
+                     animate={{ height: 'auto', opacity: 1 }}
+                     exit={{ height: 0, opacity: 0 }}
+                     className="overflow-hidden border-t border-white/5 bg-black"
+                   >
+                     {req.status === 'rejected' && req.rejectionReason && (
+                       <div className="p-4 mx-6 mt-6 bg-red-500/10 border border-red-500/30 rounded flex flex-col gap-1">
+                         <span className="font-oswald text-red-500 text-xs tracking-widest uppercase font-bold">Motif du Refus</span>
+                         <p className="font-sans text-sm text-red-200">{req.rejectionReason}</p>
+                       </div>
+                     )}
+                     <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                          <h4 className="font-oswald text-xs tracking-widest uppercase text-gray-500 mb-4 pb-2 border-b border-white/10">Configuration</h4>
+                          
+                          <div className="flex items-center justify-between bg-[#111] p-3 rounded mb-2 border border-white/5">
+                            <span className="font-sans text-sm text-gray-300">Style: <span className="text-white font-medium">{conf.style?.name}</span></span>
+                            <span className="font-mono text-xs text-amber-500">{conf.style?.pricePerNight === 0 ? 'Standard' : `+$${conf.style?.pricePerNight?.toLocaleString()}/nuit`}</span>
+                          </div>
+                          
+                          {conf.addons?.length > 0 ? (
+                            <div className="space-y-2 mt-4">
+                              {conf.addons.map((a: any, i: number) => (
+                                <div key={i} className="flex items-center justify-between bg-[#111] p-3 rounded border border-white/5">
+                                  <div className="flex items-center gap-2">
+                                    <Plus className="w-3 h-3 text-[#9300c4]" />
+                                    <span className="font-sans text-sm text-gray-300">{a.name}</span>
+                                  </div>
+                                  <span className="font-mono text-xs text-amber-500">+${(a.pricePerNight || a.price)?.toLocaleString()}/nuit</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="font-sans text-sm text-gray-500 italic mt-4">Aucun module additionnel.</p>
+                          )}
+                        </div>
+                        
+                        <div className="flex flex-col">
+                           <h4 className="font-oswald text-xs tracking-widest uppercase text-gray-500 mb-4 pb-2 border-b border-white/10">Aperçu Principal</h4>
+                           <div className="relative rounded overflow-hidden h-40 border border-white/10 shrink-0">
+                               <img src="https://static.wikia.nocookie.net/gtawiki/images/f/fe/MasterPenthouse-GTAO-Options-MasterPenthouse.png/revision/latest/scale-to-width-down/1000?cb=20210110105607" alt="Suite" className="w-full h-full object-cover" />
+                           </div>
+                           
+                           {/* Addons images gallery miniature */}
+                           {conf.addons?.length > 0 && (
+                             <div className="flex gap-2 mt-2 overflow-x-auto pb-2 custom-scrollbar">
+                               {conf.addons.map((a: any) => {
+                                  const imgMatch = a.images ? a.images[0] : a.image;
+                                  return imgMatch ? (
+                                    <div key={a.id} className="w-20 h-16 shrink-0 rounded overflow-hidden border border-white/10" title={a.name}>
+                                      <img src={imgMatch} alt={a.name} className="w-full h-full object-cover" />
+                                    </div>
+                                  ) : null;
+                               })}
+                             </div>
+                           )}
+                           
+                           <div className="mt-auto pt-4 flex justify-between items-center text-sm font-sans border-t border-white/5">
+                             <div className="flex flex-col gap-1">
+                               <span className="text-gray-400">Tarif par nuit : <span className="text-white">${conf.nightlyPrice?.toLocaleString()}</span></span>
+                               <span className="text-gray-400 text-xs">Demandé le {new Date(req.createdAt).toLocaleDateString('fr-FR')}</span>
+                             </div>
+                             {req.status === 'pending' && (
+                               <button 
+                                 onClick={(e) => deleteRequest(req.id, e)}
+                                 className="flex items-center gap-2 px-4 py-2 border border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-400 transition-colors uppercase font-oswald text-xs tracking-widest rounded"
+                               >
+                                 <Trash2 className="w-3 h-3" /> Annuler
+                               </button>
+                             )}
+                           </div>
+                        </div>
+                     </div>
+                   </motion.div>
+                 )}
+               </AnimatePresence>
+               
+             </div>
+           );
+         })}
+       </div>
     </motion.div>
   );
 }

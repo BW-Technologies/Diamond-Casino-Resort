@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { signOut, onAuthStateChanged, User, createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, orderBy, where, limit, writeBatch } from 'firebase/firestore';
 import { auth, db, secondaryAuth } from '../lib/firebase';
@@ -88,7 +88,28 @@ export default function Dashboard() {
   const [profileSaveStatus, setProfileSaveStatus] = useState('');
 
   // Prices
-  const [prices, setPrices] = useState({ silver: "$500", gold: "$1,500,000", diamond: "Sur Invitation", penthouseNight: "$50,000" });
+  const [prices, setPrices] = useState({ 
+    silver: "$500", 
+    gold: "$1,500,000", 
+    diamond: "Sur Invitation", 
+    penthouseNight: "$50,000",
+    penthouseStyleVibrant: "2000",
+    penthouseStyleSharp: "4000",
+    penthouseLounge: "10000",
+    penthouseMedia: "5000",
+    penthouseSpa: "15000",
+    penthouseBar: "6000",
+    penthouseDealer: "12000",
+    penthouseOffice: "8000",
+    penthouseGuest: "7000",
+    penthouseGarage: "2000",
+    conciergeParty: "20000",
+    conciergeValet: "50",
+    conciergeChampagne: "1000",
+    conciergeCleaning: "500",
+    conciergeLimo: "À partir de $200",
+    conciergeHeli: "À partir de $1000"
+  });
   const [savePriceStatus, setSavePriceStatus] = useState('');
 
   // Store Management
@@ -117,10 +138,24 @@ export default function Dashboard() {
   // Penthouse Request tracking
   const [hasPenthouseReq, setHasPenthouseReq] = useState(false);
 
+  // Chat Notifications
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
+    if (location.hash === '#chat') {
+      setActiveTab('chat');
+    }
+  }, [location.hash]);
+
+  useEffect(() => {
+    let unsubs: (() => void)[] = [];
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
+      unsubs.forEach(u => u());
+      unsubs = [];
+
       if (!currentUser) {
         navigate('/login');
         return;
@@ -169,11 +204,30 @@ export default function Dashboard() {
           // Check if non-staff has a penthouse request
           import('firebase/firestore').then(({ query, collection, where, onSnapshot }) => {
             const q = query(collection(db, 'penthouseRequests'), where('userId', '==', currentUser.uid));
-            onSnapshot(q, snap => {
+            unsubs.push(onSnapshot(q, snap => {
               setHasPenthouseReq(!snap.empty);
-            });
+            }));
           });
         }
+
+        // Chat Notifications
+        const isStaff = uData.role === 'patron' || uData.role === 'employe';
+        import('firebase/firestore').then(({ query, collection, onSnapshot, doc }) => {
+          if (isStaff) {
+            const qChats = query(collection(db, 'chats'));
+            unsubs.push(onSnapshot(qChats, snap => {
+              let count = 0;
+              snap.forEach(d => { count += (d.data().unreadCount || 0); });
+              setUnreadChatCount(count);
+            }));
+          } else {
+            unsubs.push(onSnapshot(doc(db, 'chats', currentUser.uid), snap => {
+              if (snap.exists()) {
+                setUnreadChatCount(snap.data().unreadCount || 0);
+              }
+            }));
+          }
+        });
 
       } catch (err) {
         console.error("Error fetching user data", err);
@@ -182,7 +236,10 @@ export default function Dashboard() {
       }
     });
 
-    return () => unsub();
+    return () => {
+      unsub();
+      unsubs.forEach(u => u());
+    };
   }, [navigate]);
 
   const fetchUsersList = async () => {
@@ -208,7 +265,23 @@ export default function Dashboard() {
           silver: d.silver||"$500", 
           gold: d.gold||"$1,500,000", 
           diamond: d.diamond||"Sur Invitation",
-          penthouseNight: d.penthouseNight||"$50,000"
+          penthouseNight: d.penthouseNight||"$50,000",
+          penthouseStyleVibrant: d.penthouseStyleVibrant||"2000",
+          penthouseStyleSharp: d.penthouseStyleSharp||"4000",
+          penthouseLounge: d.penthouseLounge||"10000",
+          penthouseMedia: d.penthouseMedia||"5000",
+          penthouseSpa: d.penthouseSpa||"15000",
+          penthouseBar: d.penthouseBar||"6000",
+          penthouseDealer: d.penthouseDealer||"12000",
+          penthouseOffice: d.penthouseOffice||"8000",
+          penthouseGuest: d.penthouseGuest||"7000",
+          penthouseGarage: d.penthouseGarage||"2000",
+          conciergeParty: d.conciergeParty||"20000",
+          conciergeValet: d.conciergeValet||"50",
+          conciergeChampagne: d.conciergeChampagne||"1000",
+          conciergeCleaning: d.conciergeCleaning||"500",
+          conciergeLimo: d.conciergeLimo||"À partir de $200",
+          conciergeHeli: d.conciergeHeli||"À partir de $1000"
         });
       }
     } catch(err) {
@@ -570,6 +643,11 @@ export default function Dashboard() {
              >
                <tab.icon className="w-5 h-5 shrink-0" />
                <span className="truncate">{tab.label}</span>
+               {tab.id === 'chat' && unreadChatCount > 0 && (
+                 <span className="ml-auto bg-[#9300c4] text-white min-w-[20px] h-[20px] flex items-center justify-center rounded-full text-[10px] font-bold px-1.5">
+                   {unreadChatCount}
+                 </span>
+               )}
              </button>
            ))}
         </div>
